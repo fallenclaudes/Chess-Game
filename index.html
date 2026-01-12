@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MSOC Chess Gods</title>
+    <title>MSOC Chess Grandmasters</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -23,6 +23,9 @@
             --border: 1px solid rgba(255,255,255,0.1);
             --win-green: #4ade80;
             --loss-red: #f87171;
+            
+            /* Highlight Color for Last Move */
+            --highlight-color: rgba(56, 189, 248, 0.5); 
         }
 
         body {
@@ -71,9 +74,14 @@
         .white-1e1d7 { background-color: #e2e8f0; color: #b58863; }
         .black-3c85d { background-color: #475569; color: #f0d9b5; }
 
+        /* LAST MOVE HIGHLIGHT (CSS Magic) */
+        .highlight-square {
+            box-shadow: inset 0 0 3px 3px var(--highlight-color);
+        }
+
         /* --- SIDEBAR --- */
         .sidebar {
-            width: 320px; height: 570px;
+            width: 340px; height: 570px;
             background: var(--bg-panel);
             backdrop-filter: blur(15px);
             border: var(--border);
@@ -82,37 +90,71 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
 
-        /* SIDE BADGE (Shows Color) */
-        .side-badge {
-            font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
-            padding: 3px 8px; border-radius: 4px; margin-top: 5px;
-            background: rgba(255,255,255,0.1); color: #fff;
-            display: inline-block;
+        /* TABS */
+        .tabs { display: flex; border-bottom: var(--border); background: rgba(0,0,0,0.2); }
+        .tab { 
+            flex: 1; padding: 15px; text-align: center; cursor: pointer; 
+            font-weight: 600; color: var(--text-dim); transition: 0.2s; 
         }
-        .side-badge.white { background: #e2e8f0; color: #000; }
-        .side-badge.black { background: #1e293b; color: #fff; border: 1px solid #555; }
+        .tab.active { 
+            color: var(--accent); 
+            background: linear-gradient(to top, rgba(56, 189, 248, 0.1), transparent);
+            border-bottom: 2px solid var(--accent); 
+        }
+        .unread-dot {
+            display: inline-block; width: 8px; height: 8px; background: var(--loss-red);
+            border-radius: 50%; margin-left: 5px; opacity: 0; transition: opacity 0.2s;
+        }
 
-        /* PLAYER INFO */
+        /* PANELS */
+        .panel-content { display: none; flex-grow: 1; overflow-y: auto; flex-direction: column; }
+        .panel-content.active { display: flex; }
+
+        /* GAME PANEL */
         .player-box {
-            padding: 20px; border-bottom: var(--border);
+            padding: 15px 20px; border-bottom: var(--border);
             background: rgba(255,255,255,0.02);
             display: flex; justify-content: space-between; align-items: center;
         }
         .player-info { display: flex; flex-direction: column; }
         .player-name { font-weight: 800; font-size: 1.1rem; letter-spacing: 0.5px; }
         
-        /* LOG & CONTROLS */
+        .side-badge {
+            font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
+            padding: 3px 8px; border-radius: 4px; margin-top: 5px;
+            display: inline-block; opacity: 0.8;
+        }
+        .side-badge.white { background: #fff; color: #000; }
+        .side-badge.black { background: #000; color: #fff; border: 1px solid #555; }
+
         .log-area { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: monospace; color: var(--text-dim); }
         .move-row { display: flex; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .move-num { width: 30px; color: #666; }
 
+        /* CHAT PANEL */
+        .chat-area {
+            flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+        }
+        .msg {
+            max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word;
+        }
+        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg.me { background: var(--accent); color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 600; }
+        .msg-name { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 2px; }
+
+        .chat-input-area {
+            padding: 10px; border-top: var(--border); display: flex; gap: 10px;
+        }
+
+        /* CONTROLS */
         .controls { padding: 20px; border-top: var(--border); display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.2); }
         
         input {
             background: rgba(0,0,0,0.4); border: var(--border); color: #fff;
             padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box;
-            text-align: center; font-family: inherit; margin-bottom: 5px;
+            text-align: center; font-family: inherit; outline: none; transition: 0.2s;
         }
+        input:focus { border-color: var(--accent); }
         
         button {
             padding: 12px; border: none; border-radius: 6px; font-weight: 700;
@@ -165,40 +207,59 @@
     </div>
 
     <div class="sidebar">
-        <div class="player-box">
-            <div class="player-info">
-                <span class="player-name" id="oppName">Opponent</span>
-                <span class="side-badge" id="oppSideBadge" style="opacity:0;">--</span>
-            </div>
-            <div id="oppStatus" style="font-size:0.8rem; color:var(--text-dim);">Waiting...</div>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('game')">Game</div>
+            <div class="tab" onclick="switchTab('chat')">Chat <span id="chatDot" class="unread-dot"></span></div>
         </div>
 
-        <div class="log-area" id="pgnLog">
-            <div style="text-align:center; padding:30px; opacity:0.5;">Game Log</div>
+        <div id="panel-game" class="panel-content active">
+            <div class="player-box">
+                <div class="player-info">
+                    <span class="player-name" id="oppName">Opponent</span>
+                    <span class="side-badge" id="oppSideBadge" style="opacity:0;">--</span>
+                </div>
+                <div id="oppStatus" style="font-size:0.8rem; color:var(--text-dim);">Waiting...</div>
+            </div>
+
+            <div class="log-area" id="pgnLog">
+                <div style="text-align:center; padding:30px; opacity:0.5;">Moves</div>
+            </div>
+
+            <div class="player-box" style="border-top:var(--border); border-bottom:none;">
+                <div class="player-info">
+                    <span class="player-name" id="myNameDisplay">You</span>
+                    <span class="side-badge" id="mySideBadge" style="opacity:0;">--</span>
+                </div>
+                <div style="font-size:0.8rem; color:var(--win-green);">Online</div>
+            </div>
+
+            <div class="controls" id="connectPanel">
+                <input type="text" id="usernameInput" placeholder="Enter Your Name">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-primary" onclick="hostGame()">Host Game</button>
+                    <button class="btn-secondary" onclick="joinPrompt()">Join Game</button>
+                </div>
+                <div id="idDisplay" style="display:none; text-align:center; font-size:0.8rem; margin-top:10px; color:var(--text-dim);">
+                    Your ID: <span id="myPeerId" style="color:var(--accent); cursor:pointer; font-weight:bold;" onclick="copyId()">...</span>
+                </div>
+            </div>
+            
+            <div class="controls" id="gameControls" style="display:none;">
+                <button class="btn-secondary" onclick="board.flip()">Flip Board</button>
+                <button class="btn-secondary" style="border-color:var(--loss-red); color:var(--loss-red);" onclick="resignGame()">Resign</button>
+            </div>
         </div>
 
-        <div class="player-box" style="border-top:var(--border); border-bottom:none;">
-            <div class="player-info">
-                <span class="player-name" id="myNameDisplay">You</span>
-                <span class="side-badge" id="mySideBadge" style="opacity:0;">--</span>
+        <div id="panel-chat" class="panel-content">
+            <div class="chat-area" id="chatArea">
+                <div style="text-align:center; color:var(--text-dim); font-size:0.8rem; margin-top:20px;">
+                    Chat with your opponent here.
+                </div>
             </div>
-            <div style="font-size:0.8rem; color:var(--win-green);">Online</div>
-        </div>
-
-        <div class="controls" id="connectPanel">
-            <input type="text" id="usernameInput" placeholder="Enter Your Name">
-            <div style="display:flex; gap:10px;">
-                <button class="btn-primary" onclick="hostGame()">Host Game</button>
-                <button class="btn-secondary" onclick="joinPrompt()">Join Game</button>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type a message..." style="text-align:left;">
+                <button class="btn-primary" style="width:auto;" onclick="sendChat()">Send</button>
             </div>
-            <div id="idDisplay" style="display:none; text-align:center; font-size:0.8rem; margin-top:10px; color:var(--text-dim);">
-                Your ID: <span id="myPeerId" style="color:var(--accent); cursor:pointer; font-weight:bold;" onclick="copyId()">...</span>
-            </div>
-        </div>
-        
-        <div class="controls" id="gameControls" style="display:none;">
-            <button class="btn-secondary" onclick="board.flip()">Flip Board</button>
-            <button class="btn-secondary" style="border-color:var(--loss-red); color:var(--loss-red);" onclick="resignGame()">Resign</button>
         </div>
     </div>
 </div>
@@ -232,9 +293,7 @@
     }
 
     function initPeer(isHost, hostId = null) {
-        // Destroy old peer if exists to prevent conflicts
         if(peer) peer.destroy();
-
         peer = new Peer(); 
 
         peer.on('open', function(id) {
@@ -242,41 +301,28 @@
                 $('#myPeerId').text(id);
                 $('#idDisplay').show();
                 $('#oppStatus').text("Waiting for friend...");
-                // Auto-copy for convenience
                 navigator.clipboard.writeText(id).then(() => alert("Host ID Copied!\nSend this to your friend: " + id));
             } else {
                 connectTo(hostId);
             }
         });
 
-        // HOST: When a friend connects to you
+        // HOST: Connection Received
         peer.on('connection', function(connection) {
             conn = connection;
-            
-            // CRITICAL FIX: Wait for 'open' before sending data
             conn.on('open', function() {
-                // 1. Decide Sides (Coin Toss)
-                var randomSide = Math.random() > 0.5 ? 'w' : 'b'; // Host Side
+                // Coin Toss
+                var randomSide = Math.random() > 0.5 ? 'w' : 'b';
                 mySide = randomSide;
-                
                 var guestSide = (mySide === 'w') ? 'b' : 'w';
 
-                // 2. Setup Host Board
                 board.orientation(mySide === 'w' ? 'white' : 'black');
                 setSideUI(mySide);
                 
-                // 3. Send Init Packet to Guest (Name + Side)
-                sendData({ 
-                    type: 'init', 
-                    name: myName, 
-                    side: guestSide 
-                });
-
+                sendData({ type: 'init', name: myName, side: guestSide });
                 $('#oppStatus').text("Connected").css('color', '#4ade80');
                 startGameUI();
             });
-
-            // Listen for data from Guest
             conn.on('data', function(data) { handleData(data); });
         });
 
@@ -286,54 +332,38 @@
     // CLIENT: Connect to Host
     function connectTo(hostId) {
         conn = peer.connect(hostId);
-
         conn.on('open', function() {
-            // Connection established, wait for 'init' from Host
             $('#oppStatus').text("Connected to Host").css('color', '#4ade80');
         });
-
         conn.on('data', function(data) { handleData(data); });
     }
 
-    function sendData(obj) { 
-        if(conn && conn.open) {
-            conn.send(obj); 
-        } else {
-            console.log("Connection not open, queueing data or dropped.");
-        }
-    }
+    function sendData(obj) { if(conn && conn.open) conn.send(obj); }
 
     function handleData(data) {
-        // 1. Initialization (Guest receives this from Host)
         if(data.type === 'init') {
             oppName = data.name;
             mySide = data.side; 
-            
-            // Update Guest UI
             $('#oppName').text(oppName);
             setSideUI(mySide);
             board.orientation(mySide === 'w' ? 'white' : 'black');
-            
-            // Send Guest Name back to Host
             sendData({ type: 'name', name: myName });
-            
             startGameUI();
         }
-        
-        // 2. Name Sync (Host receives this from Guest)
         if(data.type === 'name') {
             oppName = data.name;
             $('#oppName').text(oppName);
         }
-
-        // 3. Moves
         if(data.type === 'move') {
             game.move(data.move);
             board.position(game.fen());
+            highlightMove(data.move.from, data.move.to);
             updateStatus();
         }
-
-        // 4. Resignation
+        if(data.type === 'chat') {
+            addMessage('them', oppName, data.msg);
+            notifyChat();
+        }
         if(data.type === 'resign') {
             showGameOver("YOU WIN!", oppName + " resigned.");
         }
@@ -342,17 +372,9 @@
     // --- 4. GAME LOGIC ---
     function onDragStart(source, piece) {
         if (game.game_over()) return false;
-        
-        // Strict Turn Enforcement
-        // 1. Can't move opponent pieces
         if (mySide === 'w' && piece.search(/^b/) !== -1) return false;
         if (mySide === 'b' && piece.search(/^w/) !== -1) return false;
-        
-        // 2. Can't move if it's not my turn
-        if ((game.turn() === 'w' && mySide !== 'w') || 
-            (game.turn() === 'b' && mySide !== 'b')) {
-            return false;
-        }
+        if ((game.turn() === 'w' && mySide !== 'w') || (game.turn() === 'b' && mySide !== 'b')) return false;
     }
 
     function onDrop(source, target) {
@@ -360,13 +382,24 @@
         var move = game.move(moveObj);
         if (move === null) return 'snapback';
 
+        highlightMove(source, target);
         sendData({ type: 'move', move: moveObj });
         updateStatus();
     }
 
+    // --- 5. HIGHLIGHT LOGIC ---
+    function highlightMove(source, target) {
+        // Remove old highlights
+        $('.square-55d63').removeClass('highlight-square');
+
+        // Add new highlights
+        var $board = $('#myBoard');
+        $board.find('.square-' + source).addClass('highlight-square');
+        $board.find('.square-' + target).addClass('highlight-square');
+    }
+
     function updateStatus() {
         renderPGN();
-
         if (game.in_checkmate()) {
             let winner = (game.turn() === 'w') ? "BLACK" : "WHITE";
             let winnerName = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? "YOU WIN!" : oppName + " WINS";
@@ -377,7 +410,50 @@
         }
     }
 
-    // --- 5. UI HELPERS ---
+    // --- 6. CHAT LOGIC ---
+    function sendChat() {
+        var txt = $('#chatInput').val().trim();
+        if(!txt) return;
+        addMessage('me', 'You', txt);
+        sendData({ type: 'chat', msg: txt });
+        $('#chatInput').val('');
+    }
+
+    function addMessage(who, name, text) {
+        var html = `<div class="msg ${who}">
+            <div class="msg-name">${name}</div>
+            ${text}
+        </div>`;
+        $('#chatArea').append(html);
+        var objDiv = document.getElementById("chatArea");
+        objDiv.scrollTop = objDiv.scrollHeight;
+    }
+
+    function notifyChat() {
+        if(!$('#panel-chat').hasClass('active')) {
+            $('#chatDot').css('opacity', 1);
+        }
+    }
+
+    function switchTab(t) {
+        $('.tab').removeClass('active');
+        $('.panel-content').removeClass('active');
+        if(t === 'game') {
+            $('.tab:eq(0)').addClass('active');
+            $('#panel-game').addClass('active');
+        } else {
+            $('.tab:eq(1)').addClass('active');
+            $('#panel-chat').addClass('active');
+            $('#chatDot').css('opacity', 0); // Clear notification
+        }
+    }
+
+    // Handle Enter Key in Chat
+    $('#chatInput').on('keypress', function(e) {
+        if(e.which === 13) sendChat();
+    });
+
+    // --- 7. UI HELPERS ---
     function setSideUI(side) {
         const me = side === 'w' ? 'white' : 'black';
         const op = side === 'w' ? 'black' : 'white';
@@ -401,7 +477,6 @@
     function startGameUI() {
         $('#connectPanel').hide();
         $('#gameControls').show();
-        // Force board resize to fix any layout glitches on mobile
         setTimeout(board.resize, 200); 
     }
 
@@ -421,39 +496,28 @@
     }
 
     function renderPGN() {
-        var history = game.history();
+        var hist = game.history();
         var html = '';
-        for (var i = 0; i < history.length; i += 2) {
+        for (var i = 0; i < hist.length; i += 2) {
             html += `<div class="move-row">
                 <div class="move-num">${i/2 + 1}.</div>
-                <div class="move-val">${history[i]}</div>
-                <div class="move-val" style="margin-left:10px">${history[i+1] || ''}</div>
+                <div class="move-val">${hist[i]}</div>
+                <div class="move-val">${hist[i+1] || ''}</div>
             </div>`;
         }
         $('#pgnLog').html(html);
         $('#pgnLog').scrollTop(99999);
     }
 
-    function goHome() { 
-        if(confirm("Disconnect and return home?")) location.reload(); 
-    }
-    
-    function copyId() { 
-        var txt = $('#myPeerId').text();
+    function goHome() { if(confirm("Disconnect and return home?")) location.reload(); }
+    function copyId(id) { 
+        var txt = id || $('#myPeerId').text();
         navigator.clipboard.writeText(txt);
-        alert("ID Copied: " + txt); 
+        alert("ID Copied!"); 
     }
 
-    // --- INIT ---
-    var config = { 
-        draggable: true, 
-        position: 'start', 
-        onDragStart: onDragStart, 
-        onDrop: onDrop, 
-        onSnapEnd: () => board.position(game.fen()),
-        pieceTheme: pieceTheme 
-    };
-    
+    // INIT
+    var config = { draggable: true, onDragStart: onDragStart, onDrop: onDrop, pieceTheme: pieceTheme };
     board = Chessboard('myBoard', config);
     $(window).resize(board.resize);
 
