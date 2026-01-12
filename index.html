@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chess Titans - Direct Play</title>
+    <title>MSOC Chess Gods</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -219,7 +219,7 @@
 
     updateUserUI();
 
-    // --- 3. CONNECTION LOGIC ---
+    // --- 3. CONNECTION LOGIC (FIXED) ---
     function hostGame() {
         saveUser();
         initPeer(true);
@@ -232,6 +232,9 @@
     }
 
     function initPeer(isHost, hostId = null) {
+        // Destroy old peer if exists to prevent conflicts
+        if(peer) peer.destroy();
+
         peer = new Peer(); 
 
         peer.on('open', function(id) {
@@ -239,67 +242,98 @@
                 $('#myPeerId').text(id);
                 $('#idDisplay').show();
                 $('#oppStatus').text("Waiting for friend...");
-                copyId(id);
+                // Auto-copy for convenience
+                navigator.clipboard.writeText(id).then(() => alert("Host ID Copied!\nSend this to your friend: " + id));
             } else {
                 connectTo(hostId);
             }
         });
 
+        // HOST: When a friend connects to you
         peer.on('connection', function(connection) {
-            setupConn(connection);
+            conn = connection;
             
-            // COIN TOSS (Host Decides)
-            if(Math.random() > 0.5) {
-                mySide = 'w'; // Host is White
-                sendData({ type: 'init', name: myName, side: 'b' }); // Tell guest they are Black
-                setSideUI('w');
-            } else {
-                mySide = 'b'; // Host is Black
-                sendData({ type: 'init', name: myName, side: 'w' }); // Tell guest they are White
-                setSideUI('b');
-            }
-            
-            $('#oppStatus').text("Connected").css('color', '#4ade80');
-            startGameUI();
+            // CRITICAL FIX: Wait for 'open' before sending data
+            conn.on('open', function() {
+                // 1. Decide Sides (Coin Toss)
+                var randomSide = Math.random() > 0.5 ? 'w' : 'b'; // Host Side
+                mySide = randomSide;
+                
+                var guestSide = (mySide === 'w') ? 'b' : 'w';
+
+                // 2. Setup Host Board
+                board.orientation(mySide === 'w' ? 'white' : 'black');
+                setSideUI(mySide);
+                
+                // 3. Send Init Packet to Guest (Name + Side)
+                sendData({ 
+                    type: 'init', 
+                    name: myName, 
+                    side: guestSide 
+                });
+
+                $('#oppStatus').text("Connected").css('color', '#4ade80');
+                startGameUI();
+            });
+
+            // Listen for data from Guest
+            conn.on('data', function(data) { handleData(data); });
         });
+
+        peer.on('error', function(err) { alert("Connection Error: " + err.type); });
     }
 
+    // CLIENT: Connect to Host
     function connectTo(hostId) {
-        var connection = peer.connect(hostId);
-        setupConn(connection);
-    }
+        conn = peer.connect(hostId);
 
-    function setupConn(connection) {
-        conn = connection;
+        conn.on('open', function() {
+            // Connection established, wait for 'init' from Host
+            $('#oppStatus').text("Connected to Host").css('color', '#4ade80');
+        });
+
         conn.on('data', function(data) { handleData(data); });
     }
 
-    function sendData(obj) { if(conn) conn.send(obj); }
+    function sendData(obj) { 
+        if(conn && conn.open) {
+            conn.send(obj); 
+        } else {
+            console.log("Connection not open, queueing data or dropped.");
+        }
+    }
 
     function handleData(data) {
+        // 1. Initialization (Guest receives this from Host)
         if(data.type === 'init') {
-            // Received setup from Host
             oppName = data.name;
-            mySide = data.side; // Set my side based on coin toss
+            mySide = data.side; 
             
+            // Update Guest UI
             $('#oppName').text(oppName);
-            $('#oppStatus').text("Connected").css('color', '#4ade80');
-            
             setSideUI(mySide);
+            board.orientation(mySide === 'w' ? 'white' : 'black');
             
-            // Send my name back
+            // Send Guest Name back to Host
             sendData({ type: 'name', name: myName });
+            
             startGameUI();
         }
+        
+        // 2. Name Sync (Host receives this from Guest)
         if(data.type === 'name') {
             oppName = data.name;
             $('#oppName').text(oppName);
         }
+
+        // 3. Moves
         if(data.type === 'move') {
             game.move(data.move);
             board.position(game.fen());
             updateStatus();
         }
+
+        // 4. Resignation
         if(data.type === 'resign') {
             showGameOver("YOU WIN!", oppName + " resigned.");
         }
@@ -308,10 +342,17 @@
     // --- 4. GAME LOGIC ---
     function onDragStart(source, piece) {
         if (game.game_over()) return false;
+        
         // Strict Turn Enforcement
+        // 1. Can't move opponent pieces
         if (mySide === 'w' && piece.search(/^b/) !== -1) return false;
         if (mySide === 'b' && piece.search(/^w/) !== -1) return false;
-        if ((game.turn() === 'w' && mySide !== 'w') || (game.turn() === 'b' && mySide !== 'b')) return false;
+        
+        // 2. Can't move if it's not my turn
+        if ((game.turn() === 'w' && mySide !== 'w') || 
+            (game.turn() === 'b' && mySide !== 'b')) {
+            return false;
+        }
     }
 
     function onDrop(source, target) {
@@ -324,20 +365,8 @@
     }
 
     function updateStatus() {
-        // PGN
-        var history = game.history();
-        var html = '';
-        for (var i = 0; i < history.length; i += 2) {
-            html += `<div class="move-row">
-                <div class="move-num">${i/2 + 1}.</div>
-                <div class="move-val">${history[i]}</div>
-                <div class="move-val" style="margin-left:10px">${history[i+1] || ''}</div>
-            </div>`;
-        }
-        $('#pgnLog').html(html);
-        $('#pgnLog').scrollTop(99999);
+        renderPGN();
 
-        // Checkmate/Draw Logic
         if (game.in_checkmate()) {
             let winner = (game.turn() === 'w') ? "BLACK" : "WHITE";
             let winnerName = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? "YOU WIN!" : oppName + " WINS";
@@ -350,10 +379,6 @@
 
     // --- 5. UI HELPERS ---
     function setSideUI(side) {
-        // Set Board Orientation
-        board.orientation(side === 'w' ? 'white' : 'black');
-        
-        // Update Badges
         const me = side === 'w' ? 'white' : 'black';
         const op = side === 'w' ? 'black' : 'white';
         
@@ -376,6 +401,8 @@
     function startGameUI() {
         $('#connectPanel').hide();
         $('#gameControls').show();
+        // Force board resize to fix any layout glitches on mobile
+        setTimeout(board.resize, 200); 
     }
 
     function showGameOver(title, sub) {
@@ -393,15 +420,40 @@
         }
     }
 
-    function goHome() { if(confirm("Disconnect and return home?")) location.reload(); }
-    
-    function copyId(id) { 
-        navigator.clipboard.writeText(id || $('#myPeerId').text()); 
-        alert("ID Copied!"); 
+    function renderPGN() {
+        var history = game.history();
+        var html = '';
+        for (var i = 0; i < history.length; i += 2) {
+            html += `<div class="move-row">
+                <div class="move-num">${i/2 + 1}.</div>
+                <div class="move-val">${history[i]}</div>
+                <div class="move-val" style="margin-left:10px">${history[i+1] || ''}</div>
+            </div>`;
+        }
+        $('#pgnLog').html(html);
+        $('#pgnLog').scrollTop(99999);
     }
 
-    // INIT
-    var config = { draggable: true, onDragStart: onDragStart, onDrop: onDrop, pieceTheme: pieceTheme };
+    function goHome() { 
+        if(confirm("Disconnect and return home?")) location.reload(); 
+    }
+    
+    function copyId() { 
+        var txt = $('#myPeerId').text();
+        navigator.clipboard.writeText(txt);
+        alert("ID Copied: " + txt); 
+    }
+
+    // --- INIT ---
+    var config = { 
+        draggable: true, 
+        position: 'start', 
+        onDragStart: onDragStart, 
+        onDrop: onDrop, 
+        onSnapEnd: () => board.position(game.fen()),
+        pieceTheme: pieceTheme 
+    };
+    
     board = Chessboard('myBoard', config);
     $(window).resize(board.resize);
 
