@@ -3,309 +3,451 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chess Titans - Online Multiplayer</title>
+    <title>Chess Master P2P</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-deep: #0f172a;
-            --bg-light: #1e293b;
-            --glass: rgba(255, 255, 255, 0.1);
+            --bg-dark: #0f172a;
+            --bg-panel: rgba(30, 41, 59, 0.7);
             --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: 1px solid rgba(255,255,255,0.1);
         }
 
         body {
-            background: radial-gradient(circle at center, var(--bg-light), var(--bg-deep));
-            color: #e2e8f0;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top, #1e293b, #020617);
+            color: var(--text-main);
             margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             overflow: hidden;
         }
 
-        /* --- UI ELEMENTS --- */
-        .top-bar {
-            margin-bottom: 20px;
-            background: var(--glass);
-            padding: 10px 20px;
-            border-radius: 50px;
-            border: 1px solid rgba(255,255,255,0.1);
+        /* --- LAYOUT --- */
+        .app-container {
             display: flex;
-            gap: 15px;
-            align-items: center;
-            backdrop-filter: blur(10px);
+            gap: 20px;
+            padding: 20px;
+            align-items: flex-start;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
         }
 
-        .status-dot {
-            height: 10px; width: 10px; 
-            background-color: #f00; 
-            border-radius: 50%;
-            box-shadow: 0 0 10px #f00;
-            transition: all 0.3s;
-        }
-        .status-dot.online { background-color: #0f0; box-shadow: 0 0 10px #0f0; }
-
-        .layout {
-            display: flex;
-            gap: 30px;
-            align-items: center;
-        }
-
-        /* --- BOARD WRAPPER --- */
-        .board-wrapper {
-            width: 500px;
-            height: 500px;
+        /* --- BOARD --- */
+        .board-card {
             padding: 10px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(10px);
+            border: var(--border);
+            border-radius: 12px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
+        .board-inner { width: 550px; height: 550px; }
 
-        #myBoard { width: 100%; height: 100%; }
+        /* Custom Board Colors */
+        .white-1e1d7 { background-color: #e2e8f0; color: #b58863; }
+        .black-3c85d { background-color: #64748b; color: #f0d9b5; }
 
         /* --- SIDEBAR --- */
         .sidebar {
-            width: 250px;
-            background: var(--glass);
+            width: 320px;
+            height: 570px;
+            background: var(--bg-panel);
+            backdrop-filter: blur(15px);
+            border: var(--border);
             border-radius: 12px;
-            padding: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            height: 500px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
-        .info-box {
-            padding: 15px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
+        /* Player Headers */
+        .player-box {
+            padding: 15px 20px;
+            border-bottom: var(--border);
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        h3 { margin: 0 0 10px 0; color: var(--accent); font-size: 0.9rem; text-transform: uppercase; }
-        p { margin: 0; font-size: 1.2rem; font-family: monospace; font-weight: bold; }
-
-        .controls { margin-top: auto; }
+        .player-name { font-weight: 800; font-size: 1.1rem; }
+        .player-status { font-size: 0.8rem; color: var(--text-dim); }
         
-        input {
-            background: rgba(0,0,0,0.3); border: 1px solid #555; color: #fff;
-            padding: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px;
-            border-radius: 4px; text-align: center;
+        .avatar {
+            width: 40px; height: 40px; 
+            border-radius: 8px; 
+            background: #334155; 
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: var(--accent);
+            border: 1px solid rgba(255,255,255,0.1);
         }
+
+        /* PGN Log */
+        .log-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .move-row {
+            display: flex; padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .move-num { width: 30px; color: var(--text-dim); }
+        .move-val { width: 80px; color: #e2e8f0; }
+
+        /* Controls */
+        .controls {
+            padding: 20px;
+            border-top: var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        input {
+            background: rgba(0,0,0,0.4);
+            border: var(--border);
+            color: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            font-family: inherit;
+        }
+        input:focus { border-color: var(--accent); }
 
         button {
-            width: 100%;
             padding: 12px;
-            background: var(--accent);
             border: none;
-            border-radius: 4px;
-            color: #000;
-            font-weight: bold;
+            border-radius: 6px;
+            font-weight: 700;
             cursor: pointer;
-            margin-bottom: 10px;
-            transition: 0.2s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            width: 100%;
         }
-        button:hover { filter: brightness(1.1); }
-        button.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+        .btn-primary { background: var(--accent); color: #0f172a; }
+        .btn-primary:hover { box-shadow: 0 0 15px var(--accent-glow); transform: translateY(-1px); }
+        .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-dim); border: var(--border); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
-        /* Glass Board Styling */
-        .white-1e1d7 { background-color: #e2e2e2; color: #5a6e80; }
-        .black-3c85d { background-color: #5a6e80; color: #e2e2e2; }
+        /* --- MODAL (Game Over) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none; /* Hidden by default */
+            justify-content: center; align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        .modal-box {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+            max-width: 400px;
+            width: 90%;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .winner-text { font-size: 2rem; font-weight: 900; color: var(--accent); margin-bottom: 10px; }
+        .sub-text { color: var(--text-dim); margin-bottom: 20px; }
 
-        @media (max-width: 800px) {
-            .layout { flex-direction: column; }
-            .board-wrapper { width: 90vw; height: 90vw; }
-            .sidebar { width: 90vw; height: auto; }
+        /* Mobile */
+        @media(max-width: 900px) {
+            .app-container { flex-direction: column; padding: 10px; align-items: center; }
+            .board-inner { width: 92vw; height: 92vw; }
+            .sidebar { width: 100%; height: auto; }
+            .log-area { height: 150px; }
         }
     </style>
 </head>
 <body>
 
-<div class="top-bar">
-    <div id="connectionDot" class="status-dot"></div>
-    <span id="roomDisplay">Room: Disconnected</span>
+<div class="modal-overlay" id="gameOverModal">
+    <div class="modal-box">
+        <div class="winner-text" id="winnerText">CHECKMATE!</div>
+        <div class="sub-text" id="winSubtext">White Wins</div>
+        <button class="btn-primary" onclick="closeModal()">Close</button>
+        <button class="btn-secondary" style="margin-top:10px" onclick="resetGame()">Rematch</button>
+    </div>
 </div>
 
-<div class="layout">
-    <div class="board-wrapper">
-        <div id="myBoard"></div>
+<div class="app-container">
+    <div class="board-card">
+        <div id="myBoard" class="board-inner"></div>
     </div>
 
     <div class="sidebar">
-        <div class="info-box">
-            <h3>Turn</h3>
-            <div id="status">White to move</div>
+        <div class="player-box">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div class="avatar" id="oppAvatar">OP</div>
+                <div>
+                    <div class="player-name" id="oppName">Opponent</div>
+                    <div class="player-status" id="oppStatus">Waiting...</div>
+                </div>
+            </div>
         </div>
 
-        <div class="info-box">
-            <h3>Last Move</h3>
-            <div id="lastMove">--</div>
+        <div class="log-area" id="pgnLog">
+            <div style="text-align:center; color:#555; padding:20px;">Game Log</div>
         </div>
 
-        <div class="controls">
-            <input type="text" id="roomInput" placeholder="Enter Room Name">
-            <button id="joinBtn">Join / Create Room</button>
-            <button class="secondary" onclick="board.flip()">Flip Board View</button>
-            <button class="secondary" id="resetBtn">Reset Game</button>
+        <div class="player-box" style="border-top:var(--border); border-bottom:none; background:rgba(255,255,255,0.02);">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div class="avatar" style="background:var(--accent); color:#000;" id="myAvatar">ME</div>
+                <div>
+                    <div class="player-name" id="myNameDisplay">You</div>
+                    <div class="player-status" id="myStatus">Connected</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls" id="connectPanel">
+            <input type="text" id="usernameInput" placeholder="Enter Your Name">
+            <div style="display:flex; gap:5px;">
+                <button class="btn-primary" onclick="createGame()">Host Game</button>
+                <button class="btn-secondary" onclick="joinGamePrompt()">Join Friend</button>
+            </div>
+            <div id="idDisplay" style="text-align:center; font-size:0.8rem; color:var(--text-dim); display:none;">
+                Your ID: <span id="myPeerId" style="color:#fff; font-weight:bold; cursor:pointer;" onclick="copyId()">...</span>
+            </div>
+        </div>
+
+        <div class="controls" id="gameControls" style="display:none;">
+            <button class="btn-secondary" onclick="board.flip()">Flip Board</button>
+            <button class="btn-secondary" onclick="resignGame()" style="border-color:#ef4444; color:#ef4444;">Resign</button>
         </div>
     </div>
 </div>
 
-<script type="module">
-    // --- 1. FIREBASE CONFIGURATION ---
-    // !!! PASTE YOUR KEYS HERE !!!
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "PASTE_API_KEY_HERE",
-        authDomain: "PASTE_AUTH_DOMAIN_HERE",
-        databaseURL: "PASTE_DATABASE_URL_HERE",
-        projectId: "PASTE_PROJECT_ID_HERE",
-        storageBucket: "PASTE_STORAGE_BUCKET_HERE",
-        messagingSenderId: "PASTE_SENDER_ID_HERE",
-        appId: "PASTE_APP_ID_HERE"
-    };
-
-    // Initialize Firebase
-    let app, db;
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getDatabase(app);
-    } catch(e) {
-        console.error("Firebase config missing or invalid.");
-    }
-
-    // --- 2. GAME VARIABLES ---
-    var board = null;
-    var game = new Chess();
-    var currentRoom = null;
-    var isOnline = false;
-
-    // --- 3. GLASS PIECE THEME ---
-    function pieceTheme (piece) {
+<script>
+    // --- 1. CONFIGURATION ---
+    // Looks for images in "pieces/" folder (e.g. pieces/wp.png)
+    function pieceTheme(piece) {
         return 'pieces/' + piece.toLowerCase() + '.png';
     }
 
-    // --- 4. BOARD LOGIC ---
-    function onDragStart (source, piece) {
-        // Prevent moving if game over
-        if (game.game_over()) return false;
+    // --- 2. STATE ---
+    var board = null;
+    var game = new Chess();
+    var peer = null;
+    var conn = null;
+    var myName = "Player";
+    var oppName = "Opponent";
+    var mySide = 'w'; 
+
+    // --- 3. PEERJS SETUP ---
+    function initPeer(isHost, hostIdToJoin = null) {
+        // Create Peer
+        peer = new Peer(); 
+
+        peer.on('open', function(id) {
+            if (isHost) {
+                // We are hosting
+                $('#myPeerId').text(id);
+                $('#idDisplay').show();
+                $('#myStatus').text("Waiting for friend...");
+                copyIdToClipboard(id); // Auto copy for convenience
+            } else {
+                // We are joining
+                connectToHost(hostIdToJoin);
+            }
+        });
+
+        peer.on('connection', function(connection) {
+            setupConnection(connection);
+            // If we are host, we are White
+            mySide = 'w';
+            board.orientation('white');
+            sendData({ type: 'info', name: myName });
+            $('#oppStatus').text("Connected");
+            startGameUI();
+        });
+
+        peer.on('error', function(err) { alert("Connection Error: " + err.type); });
+    }
+
+    function connectToHost(hostId) {
+        var connection = peer.connect(hostId);
+        setupConnection(connection);
         
-        // Prevent moving if not your turn (Basic check)
-        // In a full app, you'd check if the player matches the color.
-        // For this simple version, we allow any move but sync it.
-        if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-            (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
-            return false;
+        connection.on('open', function() {
+            // We joined, so we are Black
+            mySide = 'b';
+            board.orientation('black');
+            sendData({ type: 'info', name: myName });
+            $('#oppStatus').text("Connected");
+            startGameUI();
+        });
+    }
+
+    function setupConnection(connection) {
+        conn = connection;
+        conn.on('data', function(data) {
+            handleData(data);
+        });
+    }
+
+    function sendData(obj) {
+        if(conn) conn.send(obj);
+    }
+
+    function handleData(data) {
+        switch(data.type) {
+            case 'info':
+                oppName = data.name;
+                $('#oppName').text(oppName);
+                $('#oppAvatar').text(oppName.substring(0,2).toUpperCase());
+                break;
+            case 'move':
+                game.move(data.move);
+                board.position(game.fen());
+                updateStatus();
+                break;
+            case 'reset':
+                game.reset();
+                board.start();
+                closeModal();
+                updateStatus();
+                alert(oppName + " requested a rematch!");
+                break;
+            case 'resign':
+                showGameOver("YOU WIN!", oppName + " resigned.");
+                break;
         }
     }
 
-    function onDrop (source, target) {
-        // Try move locally first
-        var move = game.move({
-            from: source,
-            to: target,
-            promotion: 'q' // Always promote to queen for simplicity
-        });
+    // --- 4. GAME LOGIC ---
+    function onDragStart(source, piece) {
+        if (game.game_over()) return false;
+        // Strict Turn Enforcement
+        if (mySide === 'w' && piece.search(/^b/) !== -1) return false;
+        if (mySide === 'b' && piece.search(/^w/) !== -1) return false;
+        if ((game.turn() === 'w' && mySide !== 'w') || (game.turn() === 'b' && mySide !== 'b')) return false;
+    }
 
-        // If illegal, snapback
+    function onDrop(source, target) {
+        var moveObj = { from: source, to: target, promotion: 'q' };
+        var move = game.move(moveObj);
         if (move === null) return 'snapback';
 
-        // If ONLINE, send to Firebase
-        if (isOnline && currentRoom) {
-            update(ref(db, 'rooms/' + currentRoom), {
-                fen: game.fen(),
-                lastMove: source + '-' + target,
-                turn: game.turn()
-            });
-        }
-
+        sendData({ type: 'move', move: moveObj });
         updateStatus();
     }
 
-    function onSnapEnd () {
-        board.position(game.fen());
-    }
+    function onSnapEnd() { board.position(game.fen()); }
 
     function updateStatus() {
-        let statusText = '';
-        let moveColor = (game.turn() === 'b') ? 'Black' : 'White';
-
-        if (game.in_checkmate()) {
-            statusText = 'Game over, ' + moveColor + ' is in checkmate.';
-        } else if (game.in_draw()) {
-            statusText = 'Game over, drawn position';
-        } else {
-            statusText = moveColor + ' to move';
-            if (game.in_check()) statusText += ', ' + moveColor + ' is in check';
+        // PGN
+        var history = game.history();
+        var html = '';
+        for (var i = 0; i < history.length; i += 2) {
+            html += `<div class="move-row">
+                <div class="move-num">${i/2 + 1}.</div>
+                <div class="move-val">${history[i]}</div>
+                <div class="move-val">${history[i+1] || ''}</div>
+            </div>`;
         }
+        $('#pgnLog').html(html);
+        $('#pgnLog').scrollTop(99999);
 
-        $('#status').text(statusText);
+        // Checkmate/Draw Logic
+        if (game.in_checkmate()) {
+            let winner = (game.turn() === 'w') ? "BLACK" : "WHITE";
+            let winnerName = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? myName : oppName;
+            showGameOver(winnerName + " WINS!", "By Checkmate");
+        } else if (game.in_draw()) {
+            showGameOver("DRAW", "Stalemate or Insufficient Material");
+        }
     }
 
-    // --- 5. MULTIPLAYER LOGIC ---
-    
-    // Join Room Function
-    window.joinRoom = function() {
-        const roomName = $('#roomInput').val() || 'lobby';
-        currentRoom = roomName;
-        isOnline = true;
+    // --- 5. UI ACTIONS ---
+    function createGame() {
+        const name = $('#usernameInput').val().trim();
+        if(!name) return alert("Enter your name first!");
+        myName = name;
+        updateMyProfile();
+        initPeer(true); // Host
+    }
 
-        $('#roomDisplay').text("Room: " + roomName);
-        $('#connectionDot').addClass('online');
-
-        // Listen for updates from Firebase
-        const roomRef = ref(db, 'rooms/' + roomName);
+    function joinGamePrompt() {
+        const name = $('#usernameInput').val().trim();
+        if(!name) return alert("Enter your name first!");
+        myName = name;
+        updateMyProfile();
         
-        onValue(roomRef, (snapshot) => {
-            const data = snapshot.val();
-            
-            if (data) {
-                // If data exists, update our local board
-                // Only update if the FEN is different to prevent loops
-                if (data.fen && data.fen !== game.fen()) {
-                    game.load(data.fen);
-                    board.position(data.fen);
-                    $('#lastMove').text(data.lastMove || '--');
-                    updateStatus();
-                }
-            } else {
-                // New room, set initial state
-                set(roomRef, {
-                    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-                    lastMove: '',
-                    turn: 'w'
-                });
-            }
+        const hostId = prompt("Enter Friend's Game ID:");
+        if(hostId) initPeer(false, hostId);
+    }
+
+    function updateMyProfile() {
+        $('#myNameDisplay').text(myName);
+        $('#myAvatar').text(myName.substring(0,2).toUpperCase());
+    }
+
+    function startGameUI() {
+        $('#connectPanel').hide();
+        $('#gameControls').show();
+        updateStatus();
+    }
+
+    function copyId() {
+        const id = $('#myPeerId').text();
+        copyIdToClipboard(id);
+    }
+
+    function copyIdToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("ID Copied! Send this to your friend.\n\n" + text);
         });
     }
 
-    // Reset Game (Online)
-    window.resetOnlineGame = function() {
-        if(isOnline && currentRoom) {
-            const startFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-            game.load(startFen);
-            board.position(startFen);
-            
-            update(ref(db, 'rooms/' + currentRoom), {
-                fen: startFen,
-                lastMove: 'Reset',
-                turn: 'w'
-            });
-        } else {
-            game.reset();
-            board.start();
-            updateStatus();
+    // --- 6. MODALS & RESETS ---
+    function showGameOver(title, sub) {
+        $('#winnerText').text(title);
+        $('#winSubtext').text(sub);
+        $('#gameOverModal').css('display', 'flex');
+    }
+
+    function closeModal() {
+        $('#gameOverModal').hide();
+    }
+
+    function resetGame() {
+        game.reset();
+        board.start();
+        closeModal();
+        updateStatus();
+        sendData({ type: 'reset' });
+    }
+
+    function resignGame() {
+        if(confirm("Are you sure you want to resign?")) {
+            sendData({ type: 'resign' });
+            showGameOver(oppName + " WINS", "You resigned.");
         }
     }
 
@@ -320,19 +462,7 @@
     };
     
     board = Chessboard('myBoard', config);
-    updateStatus();
-
-    // Check URL for room param (e.g. ?room=friend)
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomParam = urlParams.get('room');
-    if(roomParam) {
-        $('#roomInput').val(roomParam);
-        setTimeout(window.joinRoom, 1000); // Wait for libraries
-    }
-
-    // Bind Buttons
-    $('#joinBtn').on('click', window.joinRoom);
-    $('#resetBtn').on('click', window.resetOnlineGame);
+    $(window).resize(board.resize);
 
 </script>
 </body>
