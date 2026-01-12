@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chess Titans - Online Multiplayer</title>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #0f172a;
+            --bg-light: #1e293b;
+            --glass: rgba(255, 255, 255, 0.1);
+            --accent: #38bdf8;
+        }
+
+        body {
+            background: radial-gradient(circle at center, var(--bg-light), var(--bg-deep));
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* --- UI ELEMENTS --- */
+        .top-bar {
+            margin-bottom: 20px;
+            background: var(--glass);
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            height: 10px; width: 10px; 
+            background-color: #f00; 
+            border-radius: 50%;
+            box-shadow: 0 0 10px #f00;
+            transition: all 0.3s;
+        }
+        .status-dot.online { background-color: #0f0; box-shadow: 0 0 10px #0f0; }
+
+        .layout {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        /* --- BOARD WRAPPER --- */
+        .board-wrapper {
+            width: 500px;
+            height: 500px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        #myBoard { width: 100%; height: 100%; }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 250px;
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-box {
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        h3 { margin: 0 0 10px 0; color: var(--accent); font-size: 0.9rem; text-transform: uppercase; }
+        p { margin: 0; font-size: 1.2rem; font-family: monospace; font-weight: bold; }
+
+        .controls { margin-top: auto; }
+        
+        input {
+            background: rgba(0,0,0,0.3); border: 1px solid #555; color: #fff;
+            padding: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px;
+            border-radius: 4px; text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            border: none;
+            border-radius: 4px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: 0.2s;
+        }
+        button:hover { filter: brightness(1.1); }
+        button.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* Glass Board Styling */
+        .white-1e1d7 { background-color: #e2e2e2; color: #5a6e80; }
+        .black-3c85d { background-color: #5a6e80; color: #e2e2e2; }
+
+        @media (max-width: 800px) {
+            .layout { flex-direction: column; }
+            .board-wrapper { width: 90vw; height: 90vw; }
+            .sidebar { width: 90vw; height: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div id="connectionDot" class="status-dot"></div>
+    <span id="roomDisplay">Room: Disconnected</span>
+</div>
+
+<div class="layout">
+    <div class="board-wrapper">
+        <div id="myBoard"></div>
+    </div>
+
+    <div class="sidebar">
+        <div class="info-box">
+            <h3>Turn</h3>
+            <div id="status">White to move</div>
+        </div>
+
+        <div class="info-box">
+            <h3>Last Move</h3>
+            <div id="lastMove">--</div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="roomInput" placeholder="Enter Room Name">
+            <button id="joinBtn">Join / Create Room</button>
+            <button class="secondary" onclick="board.flip()">Flip Board View</button>
+            <button class="secondary" id="resetBtn">Reset Game</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // --- 1. FIREBASE CONFIGURATION ---
+    // !!! PASTE YOUR KEYS HERE !!!
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "PASTE_API_KEY_HERE",
+        authDomain: "PASTE_AUTH_DOMAIN_HERE",
+        databaseURL: "PASTE_DATABASE_URL_HERE",
+        projectId: "PASTE_PROJECT_ID_HERE",
+        storageBucket: "PASTE_STORAGE_BUCKET_HERE",
+        messagingSenderId: "PASTE_SENDER_ID_HERE",
+        appId: "PASTE_APP_ID_HERE"
+    };
+
+    // Initialize Firebase
+    let app, db;
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getDatabase(app);
+    } catch(e) {
+        console.error("Firebase config missing or invalid.");
+    }
+
+    // --- 2. GAME VARIABLES ---
+    var board = null;
+    var game = new Chess();
+    var currentRoom = null;
+    var isOnline = false;
+
+    // --- 3. GLASS PIECE THEME ---
+    function pieceTheme (piece) {
+        return 'pieces/' + piece.toLowerCase() + '.png';
+    }
+
+    // --- 4. BOARD LOGIC ---
+    function onDragStart (source, piece) {
+        // Prevent moving if game over
+        if (game.game_over()) return false;
+        
+        // Prevent moving if not your turn (Basic check)
+        // In a full app, you'd check if the player matches the color.
+        // For this simple version, we allow any move but sync it.
+        if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+            (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+            return false;
+        }
+    }
+
+    function onDrop (source, target) {
+        // Try move locally first
+        var move = game.move({
+            from: source,
+            to: target,
+            promotion: 'q' // Always promote to queen for simplicity
+        });
+
+        // If illegal, snapback
+        if (move === null) return 'snapback';
+
+        // If ONLINE, send to Firebase
+        if (isOnline && currentRoom) {
+            update(ref(db, 'rooms/' + currentRoom), {
+                fen: game.fen(),
+                lastMove: source + '-' + target,
+                turn: game.turn()
+            });
+        }
+
+        updateStatus();
+    }
+
+    function onSnapEnd () {
+        board.position(game.fen());
+    }
+
+    function updateStatus() {
+        let statusText = '';
+        let moveColor = (game.turn() === 'b') ? 'Black' : 'White';
+
+        if (game.in_checkmate()) {
+            statusText = 'Game over, ' + moveColor + ' is in checkmate.';
+        } else if (game.in_draw()) {
+            statusText = 'Game over, drawn position';
+        } else {
+            statusText = moveColor + ' to move';
+            if (game.in_check()) statusText += ', ' + moveColor + ' is in check';
+        }
+
+        $('#status').text(statusText);
+    }
+
+    // --- 5. MULTIPLAYER LOGIC ---
+    
+    // Join Room Function
+    window.joinRoom = function() {
+        const roomName = $('#roomInput').val() || 'lobby';
+        currentRoom = roomName;
+        isOnline = true;
+
+        $('#roomDisplay').text("Room: " + roomName);
+        $('#connectionDot').addClass('online');
+
+        // Listen for updates from Firebase
+        const roomRef = ref(db, 'rooms/' + roomName);
+        
+        onValue(roomRef, (snapshot) => {
+            const data = snapshot.val();
+            
+            if (data) {
+                // If data exists, update our local board
+                // Only update if the FEN is different to prevent loops
+                if (data.fen && data.fen !== game.fen()) {
+                    game.load(data.fen);
+                    board.position(data.fen);
+                    $('#lastMove').text(data.lastMove || '--');
+                    updateStatus();
+                }
+            } else {
+                // New room, set initial state
+                set(roomRef, {
+                    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                    lastMove: '',
+                    turn: 'w'
+                });
+            }
+        });
+    }
+
+    // Reset Game (Online)
+    window.resetOnlineGame = function() {
+        if(isOnline && currentRoom) {
+            const startFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+            game.load(startFen);
+            board.position(startFen);
+            
+            update(ref(db, 'rooms/' + currentRoom), {
+                fen: startFen,
+                lastMove: 'Reset',
+                turn: 'w'
+            });
+        } else {
+            game.reset();
+            board.start();
+            updateStatus();
+        }
+    }
+
+    // --- INIT ---
+    var config = {
+        draggable: true,
+        position: 'start',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd,
+        pieceTheme: pieceTheme
+    };
+    
+    board = Chessboard('myBoard', config);
+    updateStatus();
+
+    // Check URL for room param (e.g. ?room=friend)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    if(roomParam) {
+        $('#roomInput').val(roomParam);
+        setTimeout(window.joinRoom, 1000); // Wait for libraries
+    }
+
+    // Bind Buttons
+    $('#joinBtn').on('click', window.joinRoom);
+    $('#resetBtn').on('click', window.resetOnlineGame);
+
+</script>
+</body>
+</html>
