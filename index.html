@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MSOC Chess Grandmasters</title>
+    <title>Chess Master - Custom Pieces</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -15,17 +15,13 @@
     <style>
         :root {
             --bg-dark: #020617;
-            --bg-panel: rgba(15, 23, 42, 0.85);
+            --bg-panel: rgba(15, 23, 42, 0.9);
             --accent: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.4);
             --text-main: #f8fafc;
             --text-dim: #94a3b8;
             --border: 1px solid rgba(255,255,255,0.1);
             --win-green: #4ade80;
             --loss-red: #f87171;
-            
-            /* Highlight Color for Last Move */
-            --highlight-color: rgba(56, 189, 248, 0.5); 
         }
 
         body {
@@ -40,7 +36,7 @@
             overflow: hidden;
         }
 
-        /* --- HOME BUTTON --- */
+        /* --- UI COMPONENTS --- */
         .home-btn {
             position: absolute; top: 20px; left: 20px;
             background: rgba(255,255,255,0.05);
@@ -51,16 +47,14 @@
             z-index: 100; transition: 0.2s;
             backdrop-filter: blur(5px);
         }
-        .home-btn:hover { background: rgba(56, 189, 248, 0.15); box-shadow: 0 0 15px var(--accent-glow); }
+        .home-btn:hover { background: rgba(56, 189, 248, 0.15); }
 
-        /* --- LAYOUT --- */
         .app-container {
             display: flex; gap: 30px; padding: 20px;
             align-items: flex-start; max-width: 1200px; width: 100%;
             justify-content: center;
         }
 
-        /* --- BOARD --- */
         .board-card {
             padding: 10px;
             background: var(--bg-panel);
@@ -71,15 +65,11 @@
         }
         .board-inner { width: 550px; height: 550px; }
 
+        /* Transparent board to show background or custom marble if needed */
         .white-1e1d7 { background-color: #e2e8f0; color: #b58863; }
         .black-3c85d { background-color: #475569; color: #f0d9b5; }
 
-        /* LAST MOVE HIGHLIGHT (CSS Magic) */
-        .highlight-square {
-            box-shadow: inset 0 0 3px 3px var(--highlight-color);
-        }
-
-        /* --- SIDEBAR --- */
+        /* --- SIDEBAR & CHAT --- */
         .sidebar {
             width: 340px; height: 570px;
             background: var(--bg-panel);
@@ -87,118 +77,72 @@
             border: var(--border);
             border-radius: 12px;
             display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
 
-        /* TABS */
         .tabs { display: flex; border-bottom: var(--border); background: rgba(0,0,0,0.2); }
-        .tab { 
-            flex: 1; padding: 15px; text-align: center; cursor: pointer; 
-            font-weight: 600; color: var(--text-dim); transition: 0.2s; 
-        }
-        .tab.active { 
-            color: var(--accent); 
-            background: linear-gradient(to top, rgba(56, 189, 248, 0.1), transparent);
-            border-bottom: 2px solid var(--accent); 
-        }
-        .unread-dot {
-            display: inline-block; width: 8px; height: 8px; background: var(--loss-red);
-            border-radius: 50%; margin-left: 5px; opacity: 0; transition: opacity 0.2s;
-        }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; color: var(--text-dim); font-weight: 600; }
+        .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); background: rgba(56,189,248,0.05); }
+        .unread { width: 8px; height: 8px; background: var(--loss-red); border-radius: 50%; display: inline-block; margin-left: 5px; opacity: 0; }
 
-        /* PANELS */
         .panel-content { display: none; flex-grow: 1; overflow-y: auto; flex-direction: column; }
         .panel-content.active { display: flex; }
 
-        /* GAME PANEL */
-        .player-box {
-            padding: 15px 20px; border-bottom: var(--border);
-            background: rgba(255,255,255,0.02);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .player-info { display: flex; flex-direction: column; }
-        .player-name { font-weight: 800; font-size: 1.1rem; letter-spacing: 0.5px; }
-        
-        .side-badge {
-            font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
-            padding: 3px 8px; border-radius: 4px; margin-top: 5px;
-            display: inline-block; opacity: 0.8;
-        }
-        .side-badge.white { background: #fff; color: #000; }
-        .side-badge.black { background: #000; color: #fff; border: 1px solid #555; }
+        .chat-area { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; max-width: 85%; word-wrap: break-word; }
+        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; }
+        .msg.me { background: var(--accent); color: #000; align-self: flex-end; font-weight: 600; }
+        .chat-input { padding: 10px; border-top: var(--border); display: flex; gap: 5px; }
 
-        .log-area { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: monospace; color: var(--text-dim); }
-        .move-row { display: flex; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .move-num { width: 30px; color: #666; }
-
-        /* CHAT PANEL */
-        .chat-area {
-            flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
-        }
-        .msg {
-            max-width: 80%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-wrap: break-word;
-        }
-        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .msg.me { background: var(--accent); color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 600; }
-        .msg-name { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 2px; }
-
-        .chat-input-area {
-            padding: 10px; border-top: var(--border); display: flex; gap: 10px;
-        }
-
-        /* CONTROLS */
-        .controls { padding: 20px; border-top: var(--border); display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.2); }
-        
-        input {
-            background: rgba(0,0,0,0.4); border: var(--border); color: #fff;
-            padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box;
-            text-align: center; font-family: inherit; outline: none; transition: 0.2s;
-        }
-        input:focus { border-color: var(--accent); }
-        
-        button {
-            padding: 12px; border: none; border-radius: 6px; font-weight: 700;
-            cursor: pointer; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;
-            transition: all 0.2s; width: 100%;
-        }
-        .btn-primary { background: var(--accent); color: #0f172a; }
-        .btn-primary:hover { box-shadow: 0 0 20px var(--accent-glow); filter: brightness(1.1); }
-        .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-dim); border: var(--border); }
-        .btn-secondary:hover { background: rgba(255,255,255,0.1); color: #fff; }
-
-        /* MODAL */
-        .modal-overlay {
+        /* --- COIN TOSS ANIMATION --- */
+        .coin-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none;
-            justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0,0,0,0.9); z-index: 2000;
+            display: none; justify-content: center; align-items: center; flex-direction: column;
         }
-        .modal-box {
-            background: #1e293b; padding: 40px; border-radius: 16px;
-            text-align: center; border: 1px solid var(--accent);
-            box-shadow: 0 0 40px var(--accent-glow);
-            max-width: 400px; width: 90%;
+        .coin {
+            width: 150px; height: 150px;
+            transform-style: preserve-3d;
+            animation: spin 0.5s infinite linear;
+            margin-bottom: 30px;
         }
+        .coin-side {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 50%; border: 5px solid #ffd700;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 2rem; font-weight: bold; background: #1e293b;
+            backface-visibility: hidden;
+        }
+        .coin-front { background: #fff; color: #000; content: "W"; }
+        .coin-back { background: #000; color: #fff; transform: rotateY(180deg); content: "B"; }
+
+        @keyframes spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+        
+        .toss-result { font-size: 2rem; font-weight: 800; color: var(--accent); margin-top: 20px; opacity: 0; transition: opacity 0.5s; }
+
+        /* --- CONTROLS --- */
+        input { background: rgba(0,0,0,0.4); border: var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        button { padding: 12px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; width: 100%; background: var(--accent); }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
 
         @media(max-width: 900px) {
             .app-container { flex-direction: column; padding: 10px; align-items: center; }
             .board-inner { width: 92vw; height: 92vw; }
-            .sidebar { width: 100%; height: auto; min-height: 400px; }
-            .home-btn { top: 10px; left: 10px; font-size: 0.8rem; padding: 8px 12px; }
+            .sidebar { width: 100%; height: 400px; }
         }
     </style>
 </head>
 <body>
 
-<div class="home-btn" onclick="goHome()">
-    <span>⌂</span> Home
-</div>
+<div class="home-btn" onclick="goHome()"><span>⌂</span> Home</div>
 
-<div class="modal-overlay" id="gameOverModal">
-    <div class="modal-box">
-        <h1 id="winnerText" style="margin:0; font-size:2.5rem; color:var(--accent);">GAME OVER</h1>
-        <p id="winSubtext" style="color:var(--text-dim); margin-top:5px;">Checkmate</p>
-        <button class="btn-primary" style="margin-top:20px" onclick="closeModal()">Close</button>
+<div class="coin-overlay" id="coinOverlay">
+    <div class="coin" id="coin">
+        <div class="coin-side coin-front"></div>
+        <div class="coin-side coin-back"></div>
     </div>
+    <div style="color:#fff; font-size:1.2rem; margin-top:20px;">Flipping Coin...</div>
+    <div class="toss-result" id="tossResult">YOU PLAY WHITE</div>
+    <button class="btn-secondary" id="startMatchBtn" style="width:200px; margin-top:20px; display:none;" onclick="closeToss()">START MATCH</button>
 </div>
 
 <div class="app-container">
@@ -209,316 +153,209 @@
     <div class="sidebar">
         <div class="tabs">
             <div class="tab active" onclick="switchTab('game')">Game</div>
-            <div class="tab" onclick="switchTab('chat')">Chat <span id="chatDot" class="unread-dot"></span></div>
+            <div class="tab" onclick="switchTab('chat')">Chat <span id="chatDot" class="unread"></span></div>
         </div>
 
         <div id="panel-game" class="panel-content active">
-            <div class="player-box">
-                <div class="player-info">
-                    <span class="player-name" id="oppName">Opponent</span>
-                    <span class="side-badge" id="oppSideBadge" style="opacity:0;">--</span>
-                </div>
-                <div id="oppStatus" style="font-size:0.8rem; color:var(--text-dim);">Waiting...</div>
-            </div>
-
-            <div class="log-area" id="pgnLog">
-                <div style="text-align:center; padding:30px; opacity:0.5;">Moves</div>
-            </div>
-
-            <div class="player-box" style="border-top:var(--border); border-bottom:none;">
-                <div class="player-info">
-                    <span class="player-name" id="myNameDisplay">You</span>
-                    <span class="side-badge" id="mySideBadge" style="opacity:0;">--</span>
-                </div>
-                <div style="font-size:0.8rem; color:var(--win-green);">Online</div>
-            </div>
-
-            <div class="controls" id="connectPanel">
-                <input type="text" id="usernameInput" placeholder="Enter Your Name">
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-primary" onclick="hostGame()">Host Game</button>
-                    <button class="btn-secondary" onclick="joinPrompt()">Join Game</button>
-                </div>
-                <div id="idDisplay" style="display:none; text-align:center; font-size:0.8rem; margin-top:10px; color:var(--text-dim);">
-                    Your ID: <span id="myPeerId" style="color:var(--accent); cursor:pointer; font-weight:bold;" onclick="copyId()">...</span>
-                </div>
+            <div style="padding:20px; text-align:center;">
+                <h2 id="status" style="margin:0; color:var(--accent);">Waiting...</h2>
+                <p id="subStatus" style="color:var(--text-dim); margin-top:5px;">Connect to play</p>
             </div>
             
-            <div class="controls" id="gameControls" style="display:none;">
-                <button class="btn-secondary" onclick="board.flip()">Flip Board</button>
-                <button class="btn-secondary" style="border-color:var(--loss-red); color:var(--loss-red);" onclick="resignGame()">Resign</button>
+            <div style="flex-grow:1; background:rgba(0,0,0,0.2); padding:10px; font-family:monospace; color:var(--text-dim); overflow-y:auto;" id="pgnLog">
+                <div style="text-align:center; padding:20px;">Move History</div>
+            </div>
+
+            <div style="padding:20px; border-top:var(--border);">
+                <div id="connectPanel">
+                    <input type="text" id="username" placeholder="Your Name" style="margin-bottom:10px;">
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="hostGame()">Host</button>
+                        <button class="btn-secondary" onclick="joinGame()">Join</button>
+                    </div>
+                    <div id="idDisplay" style="margin-top:10px; font-size:0.8rem; text-align:center; color:var(--text-dim); display:none;">
+                        Share ID: <span id="myPeerId" style="color:#fff; cursor:pointer;" onclick="copyId()">...</span>
+                    </div>
+                </div>
+                
+                <div id="gameControls" style="display:none; display:flex; gap:10px;">
+                    <button class="btn-secondary" onclick="board.flip()">Flip</button>
+                    <button style="background:var(--loss-red); color:#fff;" onclick="location.reload()">Resign</button>
+                </div>
             </div>
         </div>
 
         <div id="panel-chat" class="panel-content">
-            <div class="chat-area" id="chatArea">
-                <div style="text-align:center; color:var(--text-dim); font-size:0.8rem; margin-top:20px;">
-                    Chat with your opponent here.
-                </div>
+            <div class="chat-area" id="chatLog">
+                <div style="text-align:center; color:var(--text-dim); margin-top:20px;">Chat Room</div>
             </div>
-            <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="Type a message..." style="text-align:left;">
-                <button class="btn-primary" style="width:auto;" onclick="sendChat()">Send</button>
+            <div class="chat-input">
+                <input type="text" id="chatMsg" placeholder="Message...">
+                <button style="width:auto;" onclick="sendChat()">Send</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 1. CONFIGURATION ---
-    function pieceTheme(piece) { return 'pieces/' + piece.toLowerCase() + '.png'; }
+    // --- 1. CONFIGURATION: YOUR LOCAL PIECES ---
+    function pieceTheme(piece) {
+        // IMPORTANT: Ensure your files are named "wp.png", "bk.png" (lowercase)
+        return 'pieces/' + piece.toLowerCase() + '.png';
+    }
 
-    // --- 2. STATE ---
-    var board = null;
-    var game = new Chess();
-    var peer = null;
-    var conn = null;
-    
-    var myName = "Player";
-    var oppName = "Opponent";
-    var mySide = 'w'; 
+    // --- 2. VARS ---
+    var board, game = new Chess(), peer, conn, myName="Player", mySide='w';
 
-    updateUserUI();
-
-    // --- 3. CONNECTION LOGIC (FIXED) ---
+    // --- 3. CONNECTION ---
     function hostGame() {
-        saveUser();
-        initPeer(true);
-    }
-
-    function joinPrompt() {
-        saveUser();
-        const hostId = prompt("Enter Friend's Game ID:");
-        if(hostId) initPeer(false, hostId);
-    }
-
-    function initPeer(isHost, hostId = null) {
+        myName = $('#username').val() || 'Host';
         if(peer) peer.destroy();
-        peer = new Peer(); 
-
-        peer.on('open', function(id) {
-            if (isHost) {
-                $('#myPeerId').text(id);
-                $('#idDisplay').show();
-                $('#oppStatus').text("Waiting for friend...");
-                navigator.clipboard.writeText(id).then(() => alert("Host ID Copied!\nSend this to your friend: " + id));
-            } else {
-                connectTo(hostId);
-            }
+        peer = new Peer();
+        peer.on('open', id => {
+            $('#myPeerId').text(id); $('#idDisplay').show();
+            $('#status').text("Waiting for opponent...");
+            navigator.clipboard.writeText(id).then(()=>alert("ID Copied!"));
         });
-
-        // HOST: Connection Received
-        peer.on('connection', function(connection) {
-            conn = connection;
-            conn.on('open', function() {
-                // Coin Toss
-                var randomSide = Math.random() > 0.5 ? 'w' : 'b';
-                mySide = randomSide;
-                var guestSide = (mySide === 'w') ? 'b' : 'w';
-
-                board.orientation(mySide === 'w' ? 'white' : 'black');
-                setSideUI(mySide);
-                
-                sendData({ type: 'init', name: myName, side: guestSide });
-                $('#oppStatus').text("Connected").css('color', '#4ade80');
-                startGameUI();
+        peer.on('connection', c => {
+            conn = c;
+            conn.on('open', () => {
+                // Trigger Coin Toss when connection opens
+                triggerCoinToss(true); 
             });
-            conn.on('data', function(data) { handleData(data); });
+            conn.on('data', d => handleData(d));
         });
-
-        peer.on('error', function(err) { alert("Connection Error: " + err.type); });
     }
 
-    // CLIENT: Connect to Host
-    function connectTo(hostId) {
-        conn = peer.connect(hostId);
-        conn.on('open', function() {
-            $('#oppStatus').text("Connected to Host").css('color', '#4ade80');
+    function joinGame() {
+        myName = $('#username').val() || 'Guest';
+        const id = prompt("Enter Host ID:");
+        if(!id) return;
+        if(peer) peer.destroy();
+        peer = new Peer();
+        peer.on('open', () => {
+            conn = peer.connect(id);
+            conn.on('open', () => $('#status').text("Connected! Waiting for toss..."));
+            conn.on('data', d => handleData(d));
         });
-        conn.on('data', function(data) { handleData(data); });
     }
-
-    function sendData(obj) { if(conn && conn.open) conn.send(obj); }
 
     function handleData(data) {
-        if(data.type === 'init') {
-            oppName = data.name;
-            mySide = data.side; 
-            $('#oppName').text(oppName);
-            setSideUI(mySide);
+        if(data.type === 'toss') {
+            // Received Toss Result
+            playTossAnimation(data.side);
+            mySide = data.side;
             board.orientation(mySide === 'w' ? 'white' : 'black');
-            sendData({ type: 'name', name: myName });
-            startGameUI();
-        }
-        if(data.type === 'name') {
-            oppName = data.name;
-            $('#oppName').text(oppName);
         }
         if(data.type === 'move') {
             game.move(data.move);
             board.position(game.fen());
-            highlightMove(data.move.from, data.move.to);
             updateStatus();
         }
         if(data.type === 'chat') {
-            addMessage('them', oppName, data.msg);
-            notifyChat();
-        }
-        if(data.type === 'resign') {
-            showGameOver("YOU WIN!", oppName + " resigned.");
+            addChat('them', data.name, data.msg);
+            if(!$('#panel-chat').is(':visible')) $('#chatDot').css('opacity', 1);
         }
     }
 
-    // --- 4. GAME LOGIC ---
-    function onDragStart(source, piece) {
-        if (game.game_over()) return false;
-        if (mySide === 'w' && piece.search(/^b/) !== -1) return false;
-        if (mySide === 'b' && piece.search(/^w/) !== -1) return false;
-        if ((game.turn() === 'w' && mySide !== 'w') || (game.turn() === 'b' && mySide !== 'b')) return false;
+    // --- 4. COIN TOSS ANIMATION ---
+    function triggerCoinToss(isHost) {
+        // Host determines outcome
+        const result = Math.random() > 0.5 ? 'w' : 'b';
+        const guestResult = result === 'w' ? 'b' : 'w';
+        
+        mySide = result;
+        
+        // Show Animation on Host
+        playTossAnimation(result);
+        
+        // Send Result to Guest
+        if(conn) conn.send({ type: 'toss', side: guestResult });
     }
 
-    function onDrop(source, target) {
-        var moveObj = { from: source, to: target, promotion: 'q' };
-        var move = game.move(moveObj);
-        if (move === null) return 'snapback';
+    function playTossAnimation(side) {
+        $('#coinOverlay').css('display', 'flex');
+        
+        // 2 seconds spin
+        setTimeout(() => {
+            $('#coin').css('animation', 'none');
+            if(side === 'w') $('#coin').css('transform', 'rotateY(0deg)');
+            else $('#coin').css('transform', 'rotateY(180deg)');
+            
+            $('#tossResult').text("YOU PLAY " + (side==='w'?'WHITE':'BLACK')).css('opacity', 1);
+            $('#startMatchBtn').fadeIn();
+            
+            board.orientation(side==='w'?'white':'black');
+        }, 2000);
+    }
 
-        highlightMove(source, target);
-        sendData({ type: 'move', move: moveObj });
+    function closeToss() {
+        $('#coinOverlay').fadeOut();
+        $('#connectPanel').hide();
+        $('#gameControls').show();
+        $('#status').text("Game On!");
+        $('#subStatus').text("Good Luck, " + myName);
+        setTimeout(board.resize, 200);
+    }
+
+    // --- 5. CHAT ---
+    function sendChat() {
+        const txt = $('#chatMsg').val();
+        if(!txt) return;
+        addChat('me', 'You', txt);
+        if(conn) conn.send({type:'chat', name:myName, msg:txt});
+        $('#chatMsg').val('');
+    }
+
+    function addChat(who, name, msg) {
+        $('#chatLog').append(`<div class="msg ${who}"><b>${name}:</b> ${msg}</div>`);
+        $('#chatLog').scrollTop(9999);
+    }
+
+    // --- 6. GAME LOGIC ---
+    function onDragStart(s, p) {
+        if(game.game_over()) return false;
+        if(mySide === 'w' && p.search(/^b/) !== -1) return false;
+        if(mySide === 'b' && p.search(/^w/) !== -1) return false;
+        if((game.turn() === 'w' && mySide !== 'w') || (game.turn() === 'b' && mySide !== 'b')) return false;
+    }
+
+    function onDrop(s, t) {
+        var m = game.move({from:s, to:t, promotion:'q'});
+        if(m === null) return 'snapback';
+        if(conn) conn.send({type:'move', move:{from:s, to:t, promotion:'q'}});
         updateStatus();
     }
 
-    // --- 5. HIGHLIGHT LOGIC ---
-    function highlightMove(source, target) {
-        // Remove old highlights
-        $('.square-55d63').removeClass('highlight-square');
-
-        // Add new highlights
-        var $board = $('#myBoard');
-        $board.find('.square-' + source).addClass('highlight-square');
-        $board.find('.square-' + target).addClass('highlight-square');
-    }
-
     function updateStatus() {
-        renderPGN();
-        if (game.in_checkmate()) {
-            let winner = (game.turn() === 'w') ? "BLACK" : "WHITE";
-            let winnerName = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? "YOU WIN!" : oppName + " WINS";
-            showGameOver(winnerName, "Checkmate");
-        } 
-        else if (game.in_draw()) {
-            showGameOver("DRAW", "Stalemate / Repetition");
+        var h = game.history();
+        var html = '';
+        for(var i=0; i<h.length; i+=2) {
+            html += `<div>${i/2+1}. ${h[i]} ${h[i+1]||''}</div>`;
         }
-    }
-
-    // --- 6. CHAT LOGIC ---
-    function sendChat() {
-        var txt = $('#chatInput').val().trim();
-        if(!txt) return;
-        addMessage('me', 'You', txt);
-        sendData({ type: 'chat', msg: txt });
-        $('#chatInput').val('');
-    }
-
-    function addMessage(who, name, text) {
-        var html = `<div class="msg ${who}">
-            <div class="msg-name">${name}</div>
-            ${text}
-        </div>`;
-        $('#chatArea').append(html);
-        var objDiv = document.getElementById("chatArea");
-        objDiv.scrollTop = objDiv.scrollHeight;
-    }
-
-    function notifyChat() {
-        if(!$('#panel-chat').hasClass('active')) {
-            $('#chatDot').css('opacity', 1);
-        }
+        $('#pgnLog').html(html);
     }
 
     function switchTab(t) {
         $('.tab').removeClass('active');
         $('.panel-content').removeClass('active');
-        if(t === 'game') {
-            $('.tab:eq(0)').addClass('active');
-            $('#panel-game').addClass('active');
+        if(t==='game') {
+            $('.tab:eq(0)').addClass('active'); $('#panel-game').addClass('active');
         } else {
-            $('.tab:eq(1)').addClass('active');
-            $('#panel-chat').addClass('active');
-            $('#chatDot').css('opacity', 0); // Clear notification
+            $('.tab:eq(1)').addClass('active'); $('#panel-chat').addClass('active');
+            $('#chatDot').css('opacity', 0);
         }
     }
 
-    // Handle Enter Key in Chat
-    $('#chatInput').on('keypress', function(e) {
-        if(e.which === 13) sendChat();
-    });
-
-    // --- 7. UI HELPERS ---
-    function setSideUI(side) {
-        const me = side === 'w' ? 'white' : 'black';
-        const op = side === 'w' ? 'black' : 'white';
-        
-        $('#mySideBadge').text("Playing " + me).removeClass('white black').addClass(me).css('opacity', 1);
-        $('#oppSideBadge').text("Playing " + op).removeClass('white black').addClass(op).css('opacity', 1);
-    }
-
-    function saveUser() {
-        const inputName = $('#usernameInput').val().trim();
-        if(inputName) {
-            myName = inputName;
-            updateUserUI();
-        }
-    }
-
-    function updateUserUI() {
-        $('#myNameDisplay').text(myName);
-    }
-
-    function startGameUI() {
-        $('#connectPanel').hide();
-        $('#gameControls').show();
-        setTimeout(board.resize, 200); 
-    }
-
-    function showGameOver(title, sub) {
-        $('#winnerText').text(title);
-        $('#winSubtext').text(sub);
-        $('#gameOverModal').css('display', 'flex');
-    }
-
-    function closeModal() { $('#gameOverModal').hide(); }
-
-    function resignGame() {
-        if(confirm("Are you sure you want to resign?")) {
-            sendData({ type: 'resign' });
-            showGameOver("DEFEAT", "You resigned.");
-        }
-    }
-
-    function renderPGN() {
-        var hist = game.history();
-        var html = '';
-        for (var i = 0; i < hist.length; i += 2) {
-            html += `<div class="move-row">
-                <div class="move-num">${i/2 + 1}.</div>
-                <div class="move-val">${hist[i]}</div>
-                <div class="move-val">${hist[i+1] || ''}</div>
-            </div>`;
-        }
-        $('#pgnLog').html(html);
-        $('#pgnLog').scrollTop(99999);
-    }
-
-    function goHome() { if(confirm("Disconnect and return home?")) location.reload(); }
-    function copyId(id) { 
-        var txt = id || $('#myPeerId').text();
-        navigator.clipboard.writeText(txt);
-        alert("ID Copied!"); 
+    function goHome() { location.reload(); }
+    function copyId() { 
+        navigator.clipboard.writeText($('#myPeerId').text()); 
+        alert("Copied!"); 
     }
 
     // INIT
-    var config = { draggable: true, onDragStart: onDragStart, onDrop: onDrop, pieceTheme: pieceTheme };
-    board = Chessboard('myBoard', config);
+    var cfg = { draggable:true, onDragStart:onDragStart, onDrop:onDrop, pieceTheme:pieceTheme };
+    board = Chessboard('myBoard', cfg);
     $(window).resize(board.resize);
 
 </script>
