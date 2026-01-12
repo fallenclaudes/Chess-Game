@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chess Masters</title>
+    <title>Chess Titans - Pro Highlights</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -15,13 +15,15 @@
     <style>
         :root {
             --bg-dark: #020617;
-            --bg-panel: rgba(15, 23, 42, 0.9);
+            --bg-panel: rgba(15, 23, 42, 0.95);
             --accent: #38bdf8;
             --text-main: #f8fafc;
             --text-dim: #94a3b8;
-            --border: 1px solid rgba(255,255,255,0.1);
+            --border: 1px solid rgba(255,255,255,0.15);
             --win-green: #4ade80;
             --loss-red: #f87171;
+            /* HIGHLIGHT COLOR */
+            --highlight: rgba(56, 189, 248, 0.6); 
         }
 
         body {
@@ -34,6 +36,12 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
+        }
+
+        /* --- HIGHLIGHT CLASS (New) --- */
+        .highlight-square {
+            box-shadow: inset 0 0 3px 3px var(--highlight) !important;
+            background-color: rgba(56, 189, 248, 0.2) !important;
         }
 
         /* --- HOME BUTTON --- */
@@ -69,7 +77,7 @@
         .white-1e1d7 { background-color: #e2e8f0; color: #b58863; }
         .black-3c85d { background-color: #475569; color: #f0d9b5; }
 
-        /* --- SIDEBAR --- */
+        /* --- SIDEBAR & CHAT --- */
         .sidebar {
             width: 340px; height: 570px;
             background: var(--bg-panel);
@@ -77,7 +85,6 @@
             border: var(--border);
             border-radius: 12px;
             display: flex; flex-direction: column; overflow: hidden;
-            position: relative;
         }
 
         .tabs { display: flex; border-bottom: var(--border); background: rgba(0,0,0,0.2); }
@@ -88,12 +95,11 @@
         .panel-content { display: none; flex-grow: 1; overflow-y: auto; flex-direction: column; }
         .panel-content.active { display: flex; }
 
-        /* CHAT */
         .chat-area { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; max-width: 85%; word-wrap: break-word; }
-        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .msg.me { background: var(--accent); color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 600; }
-        .chat-controls { padding: 10px; border-top: var(--border); display: flex; gap: 5px; position: relative; }
+        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; }
+        .msg.me { background: var(--accent); color: #000; align-self: flex-end; font-weight: 600; }
+        .chat-input { padding: 10px; border-top: var(--border); display: flex; gap: 5px; position: relative; }
 
         /* EMOJI */
         .emoji-btn {
@@ -138,8 +144,22 @@
         @keyframes spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
         .toss-result { font-size: 2rem; font-weight: 800; color: var(--accent); margin-top: 20px; opacity: 0; transition: opacity 0.5s; }
 
+        /* MODAL (Game Over) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-box {
+            background: #1e293b; padding: 40px; border-radius: 16px;
+            text-align: center; border: 1px solid var(--accent);
+            box-shadow: 0 0 40px var(--accent-glow);
+            max-width: 400px; width: 90%;
+        }
+
         /* CONTROLS */
-        input { background: rgba(0,0,0,0.4); border: var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+        input { background: rgba(0,0,0,0.4); border: var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; outline:none; }
+        input:focus { border-color: var(--accent); }
         button { padding: 12px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; width: 100%; background: var(--accent); }
         .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
 
@@ -153,6 +173,14 @@
 <body>
 
 <div class="home-btn" onclick="goHome()"><span>⌂</span> Home</div>
+
+<div class="modal-overlay" id="gameOverModal">
+    <div class="modal-box">
+        <h1 id="winnerText" style="margin:0; font-size:2.5rem; color:var(--accent);">GAME OVER</h1>
+        <p id="winSubtext" style="color:var(--text-dim); margin-top:5px;">Checkmate</p>
+        <button class="btn-secondary" style="margin-top:20px" onclick="closeModal()">Close</button>
+    </div>
+</div>
 
 <div class="coin-overlay" id="coinOverlay">
     <div class="coin" id="coin">
@@ -199,7 +227,7 @@
                 
                 <div id="gameControls" style="display:none; display:flex; gap:10px;">
                     <button class="btn-secondary" onclick="board.flip()">Flip</button>
-                    <button style="background:var(--loss-red); color:#fff;" onclick="location.reload()">Resign</button>
+                    <button style="background:var(--loss-red); color:#fff;" onclick="resignGame()">Resign</button>
                 </div>
             </div>
         </div>
@@ -226,7 +254,7 @@
                 <div class="emoji-opt" onclick="addEmoji('👑')">👑</div>
             </div>
 
-            <div class="chat-controls">
+            <div class="chat-input">
                 <button class="emoji-btn" onclick="toggleEmoji()">😊</button>
                 <input type="text" id="chatMsg" placeholder="Message..." style="text-align:left;">
                 <button style="width:auto;" onclick="sendChat()">Send</button>
@@ -238,14 +266,12 @@
 <script>
     // --- 1. CONFIGURATION ---
     function pieceTheme(piece) {
-        // !!! IMPORTANT FIX !!! 
-        // DO NOT CHANGE THIS LINE if your files are "wP.png", "bK.png"
-        // This keeps the UpperCase letters so Netlify can find them.
-        return 'pieces/' + piece + '.png';
+        // IMPORTANT: Ensure your files are named "wp.png", "bk.png" (LOWERCASE)
+        return 'pieces/' + piece.toLowerCase() + '.png';
     }
 
     // --- 2. VARS ---
-    var board, game = new Chess(), peer, conn, myName="Player", mySide='w';
+    var board, game = new Chess(), peer, conn, myName="Player", mySide='w', oppName="Opponent";
 
     // --- 3. CONNECTION ---
     function hostGame() {
@@ -259,9 +285,7 @@
         });
         peer.on('connection', c => {
             conn = c;
-            conn.on('open', () => {
-                triggerCoinToss(true); 
-            });
+            conn.on('open', () => { triggerCoinToss(true); });
             conn.on('data', d => handleData(d));
         });
     }
@@ -288,11 +312,16 @@
         if(data.type === 'move') {
             game.move(data.move);
             board.position(game.fen());
+            highlightMove(data.move.from, data.move.to);
             updateStatus();
         }
         if(data.type === 'chat') {
             addChat('them', data.name, data.msg);
             if(!$('#panel-chat').is(':visible')) $('#chatDot').css('opacity', 1);
+        }
+        if(data.type === 'resign') {
+            // Opponent resigned
+            showGameOver("YOU WIN!", "Opponent Resigned");
         }
     }
 
@@ -328,7 +357,7 @@
         setTimeout(board.resize, 200);
     }
 
-    // --- 5. CHAT & EMOJIS ---
+    // --- 5. CHAT & EMOJI ---
     function sendChat() {
         const txt = $('#chatMsg').val();
         if(!txt) return;
@@ -343,14 +372,8 @@
         $('#chatLog').scrollTop(9999);
     }
 
-    function toggleEmoji() {
-        $('#emojiPicker').toggleClass('active');
-    }
-
-    function addEmoji(emoji) {
-        $('#chatMsg').val($('#chatMsg').val() + emoji);
-        $('#chatMsg').focus();
-    }
+    function toggleEmoji() { $('#emojiPicker').toggleClass('active'); }
+    function addEmoji(emoji) { $('#chatMsg').val($('#chatMsg').val() + emoji); $('#chatMsg').focus(); }
 
     // --- 6. GAME LOGIC ---
     function onDragStart(s, p) {
@@ -363,17 +386,52 @@
     function onDrop(s, t) {
         var m = game.move({from:s, to:t, promotion:'q'});
         if(m === null) return 'snapback';
+        
+        highlightMove(s, t);
         if(conn) conn.send({type:'move', move:{from:s, to:t, promotion:'q'}});
         updateStatus();
     }
 
+    function highlightMove(source, target) {
+        $('#myBoard .square-55d63').removeClass('highlight-square');
+        $('#myBoard .square-' + source).addClass('highlight-square');
+        $('#myBoard .square-' + target).addClass('highlight-square');
+    }
+
     function updateStatus() {
+        // PGN Logic
         var h = game.history();
         var html = '';
         for(var i=0; i<h.length; i+=2) {
             html += `<div>${i/2+1}. ${h[i]} ${h[i+1]||''}</div>`;
         }
         $('#pgnLog').html(html);
+        $('#pgnLog').scrollTop(99999);
+
+        // Win/Loss Detection
+        if (game.in_checkmate()) {
+            let winner = (game.turn() === 'w') ? "BLACK" : "WHITE"; // Turn is loser
+            let title = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? "YOU WIN!" : "YOU LOSE";
+            let color = title === "YOU WIN!" ? "var(--win-green)" : "var(--loss-red)";
+            showGameOver(title, "Checkmate", color);
+        } else if (game.in_draw()) {
+            showGameOver("DRAW", "Stalemate / Repetition", "var(--accent)");
+        }
+    }
+
+    function showGameOver(title, sub, color) {
+        $('#winnerText').text(title).css('color', color || 'var(--accent)');
+        $('#winSubtext').text(sub);
+        $('#gameOverModal').css('display', 'flex');
+    }
+
+    function closeModal() { $('#gameOverModal').hide(); }
+
+    function resignGame() {
+        if(confirm("Are you sure you want to resign?")) {
+            if(conn) conn.send({ type: 'resign' });
+            showGameOver("YOU LOSE", "You Resigned", "var(--loss-red)");
+        }
     }
 
     function switchTab(t) {
@@ -396,7 +454,6 @@
     $('#chatMsg').on('keypress', function(e) { if(e.which === 13) sendChat(); });
 
     // INIT
-    // Added 'position: start' so pieces show up immediately!
     var cfg = { 
         draggable:true, 
         position: 'start', 
