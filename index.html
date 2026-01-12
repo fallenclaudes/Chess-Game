@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chess Master - Custom Pieces</title>
+    <title>Chess Masters</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -36,7 +36,7 @@
             overflow: hidden;
         }
 
-        /* --- UI COMPONENTS --- */
+        /* --- HOME BUTTON --- */
         .home-btn {
             position: absolute; top: 20px; left: 20px;
             background: rgba(255,255,255,0.05);
@@ -49,6 +49,7 @@
         }
         .home-btn:hover { background: rgba(56, 189, 248, 0.15); }
 
+        /* --- LAYOUT --- */
         .app-container {
             display: flex; gap: 30px; padding: 20px;
             align-items: flex-start; max-width: 1200px; width: 100%;
@@ -65,11 +66,10 @@
         }
         .board-inner { width: 550px; height: 550px; }
 
-        /* Transparent board to show background or custom marble if needed */
         .white-1e1d7 { background-color: #e2e8f0; color: #b58863; }
         .black-3c85d { background-color: #475569; color: #f0d9b5; }
 
-        /* --- SIDEBAR & CHAT --- */
+        /* --- SIDEBAR --- */
         .sidebar {
             width: 340px; height: 570px;
             background: var(--bg-panel);
@@ -77,23 +77,43 @@
             border: var(--border);
             border-radius: 12px;
             display: flex; flex-direction: column; overflow: hidden;
+            position: relative;
         }
 
         .tabs { display: flex; border-bottom: var(--border); background: rgba(0,0,0,0.2); }
         .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; color: var(--text-dim); font-weight: 600; }
         .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); background: rgba(56,189,248,0.05); }
-        .unread { width: 8px; height: 8px; background: var(--loss-red); border-radius: 50%; display: inline-block; margin-left: 5px; opacity: 0; }
+        .unread { width: 8px; height: 8px; background: var(--loss-red); border-radius: 50%; display: inline-block; margin-left: 5px; opacity: 0; transition: 0.3s; }
 
         .panel-content { display: none; flex-grow: 1; overflow-y: auto; flex-direction: column; }
         .panel-content.active { display: flex; }
 
+        /* CHAT */
         .chat-area { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; max-width: 85%; word-wrap: break-word; }
-        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; }
-        .msg.me { background: var(--accent); color: #000; align-self: flex-end; font-weight: 600; }
-        .chat-input { padding: 10px; border-top: var(--border); display: flex; gap: 5px; }
+        .msg.them { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg.me { background: var(--accent); color: #000; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 600; }
+        .chat-controls { padding: 10px; border-top: var(--border); display: flex; gap: 5px; position: relative; }
 
-        /* --- COIN TOSS ANIMATION --- */
+        /* EMOJI */
+        .emoji-btn {
+            background: rgba(255,255,255,0.1); border: var(--border); color: #fff;
+            padding: 0 12px; border-radius: 6px; cursor: pointer; font-size: 1.2rem;
+        }
+        .emoji-picker {
+            display: none; position: absolute; bottom: 60px; left: 10px; right: 10px;
+            background: #1e293b; border: var(--border); border-radius: 8px;
+            padding: 10px; grid-template-columns: repeat(6, 1fr); gap: 5px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5); z-index: 10;
+        }
+        .emoji-picker.active { display: grid; }
+        .emoji-opt {
+            cursor: pointer; text-align: center; padding: 5px; font-size: 1.2rem;
+            border-radius: 4px; transition: 0.2s;
+        }
+        .emoji-opt:hover { background: rgba(255,255,255,0.1); }
+
+        /* COIN TOSS */
         .coin-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 2000;
@@ -116,10 +136,9 @@
         .coin-back { background: #000; color: #fff; transform: rotateY(180deg); content: "B"; }
 
         @keyframes spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
-        
         .toss-result { font-size: 2rem; font-weight: 800; color: var(--accent); margin-top: 20px; opacity: 0; transition: opacity 0.5s; }
 
-        /* --- CONTROLS --- */
+        /* CONTROLS */
         input { background: rgba(0,0,0,0.4); border: var(--border); color: #fff; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; }
         button { padding: 12px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; width: 100%; background: var(--accent); }
         .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
@@ -127,7 +146,7 @@
         @media(max-width: 900px) {
             .app-container { flex-direction: column; padding: 10px; align-items: center; }
             .board-inner { width: 92vw; height: 92vw; }
-            .sidebar { width: 100%; height: 400px; }
+            .sidebar { width: 100%; height: 450px; }
         }
     </style>
 </head>
@@ -187,10 +206,29 @@
 
         <div id="panel-chat" class="panel-content">
             <div class="chat-area" id="chatLog">
-                <div style="text-align:center; color:var(--text-dim); margin-top:20px;">Chat Room</div>
+                <div style="text-align:center; color:var(--text-dim); font-size:0.8rem; margin-top:20px;">
+                    Chat Room
+                </div>
             </div>
-            <div class="chat-input">
-                <input type="text" id="chatMsg" placeholder="Message...">
+            
+            <div id="emojiPicker" class="emoji-picker">
+                <div class="emoji-opt" onclick="addEmoji('😀')">😀</div>
+                <div class="emoji-opt" onclick="addEmoji('😂')">😂</div>
+                <div class="emoji-opt" onclick="addEmoji('😎')">😎</div>
+                <div class="emoji-opt" onclick="addEmoji('😭')">😭</div>
+                <div class="emoji-opt" onclick="addEmoji('😡')">😡</div>
+                <div class="emoji-opt" onclick="addEmoji('👍')">👍</div>
+                <div class="emoji-opt" onclick="addEmoji('👎')">👎</div>
+                <div class="emoji-opt" onclick="addEmoji('🎉')">🎉</div>
+                <div class="emoji-opt" onclick="addEmoji('🔥')">🔥</div>
+                <div class="emoji-opt" onclick="addEmoji('❤️')">❤️</div>
+                <div class="emoji-opt" onclick="addEmoji('♟️')">♟️</div>
+                <div class="emoji-opt" onclick="addEmoji('👑')">👑</div>
+            </div>
+
+            <div class="chat-controls">
+                <button class="emoji-btn" onclick="toggleEmoji()">😊</button>
+                <input type="text" id="chatMsg" placeholder="Message..." style="text-align:left;">
                 <button style="width:auto;" onclick="sendChat()">Send</button>
             </div>
         </div>
@@ -198,10 +236,12 @@
 </div>
 
 <script>
-    // --- 1. CONFIGURATION: YOUR LOCAL PIECES ---
+    // --- 1. CONFIGURATION ---
     function pieceTheme(piece) {
-        // IMPORTANT: Ensure your files are named "wp.png", "bk.png" (lowercase)
-        return 'pieces/' + piece.toLowerCase() + '.png';
+        // !!! IMPORTANT FIX !!! 
+        // DO NOT CHANGE THIS LINE if your files are "wP.png", "bK.png"
+        // This keeps the UpperCase letters so Netlify can find them.
+        return 'pieces/' + piece + '.png';
     }
 
     // --- 2. VARS ---
@@ -220,7 +260,6 @@
         peer.on('connection', c => {
             conn = c;
             conn.on('open', () => {
-                // Trigger Coin Toss when connection opens
                 triggerCoinToss(true); 
             });
             conn.on('data', d => handleData(d));
@@ -242,7 +281,6 @@
 
     function handleData(data) {
         if(data.type === 'toss') {
-            // Received Toss Result
             playTossAnimation(data.side);
             mySide = data.side;
             board.orientation(mySide === 'w' ? 'white' : 'black');
@@ -258,25 +296,17 @@
         }
     }
 
-    // --- 4. COIN TOSS ANIMATION ---
+    // --- 4. COIN TOSS ---
     function triggerCoinToss(isHost) {
-        // Host determines outcome
         const result = Math.random() > 0.5 ? 'w' : 'b';
         const guestResult = result === 'w' ? 'b' : 'w';
-        
         mySide = result;
-        
-        // Show Animation on Host
         playTossAnimation(result);
-        
-        // Send Result to Guest
         if(conn) conn.send({ type: 'toss', side: guestResult });
     }
 
     function playTossAnimation(side) {
         $('#coinOverlay').css('display', 'flex');
-        
-        // 2 seconds spin
         setTimeout(() => {
             $('#coin').css('animation', 'none');
             if(side === 'w') $('#coin').css('transform', 'rotateY(0deg)');
@@ -298,18 +328,28 @@
         setTimeout(board.resize, 200);
     }
 
-    // --- 5. CHAT ---
+    // --- 5. CHAT & EMOJIS ---
     function sendChat() {
         const txt = $('#chatMsg').val();
         if(!txt) return;
         addChat('me', 'You', txt);
         if(conn) conn.send({type:'chat', name:myName, msg:txt});
         $('#chatMsg').val('');
+        $('#emojiPicker').removeClass('active');
     }
 
     function addChat(who, name, msg) {
         $('#chatLog').append(`<div class="msg ${who}"><b>${name}:</b> ${msg}</div>`);
         $('#chatLog').scrollTop(9999);
+    }
+
+    function toggleEmoji() {
+        $('#emojiPicker').toggleClass('active');
+    }
+
+    function addEmoji(emoji) {
+        $('#chatMsg').val($('#chatMsg').val() + emoji);
+        $('#chatMsg').focus();
     }
 
     // --- 6. GAME LOGIC ---
@@ -353,8 +393,17 @@
         alert("Copied!"); 
     }
 
+    $('#chatMsg').on('keypress', function(e) { if(e.which === 13) sendChat(); });
+
     // INIT
-    var cfg = { draggable:true, onDragStart:onDragStart, onDrop:onDrop, pieceTheme:pieceTheme };
+    // Added 'position: start' so pieces show up immediately!
+    var cfg = { 
+        draggable:true, 
+        position: 'start', 
+        onDragStart:onDragStart, 
+        onDrop:onDrop, 
+        pieceTheme:pieceTheme 
+    };
     board = Chessboard('myBoard', cfg);
     $(window).resize(board.resize);
 
