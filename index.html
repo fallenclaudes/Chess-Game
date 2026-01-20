@@ -22,6 +22,7 @@
             --accent-glow: rgba(56, 189, 248, 0.4);
             --win-green: #4ade80;
             --loss-red: #f87171;
+            --spec-yellow: #facc15;
             
             /* Board Colors */
             --board-white: #e2e2e2;
@@ -42,8 +43,7 @@
 
         /* --- HOME BUTTON --- */
         .home-btn {
-            position: absolute;
-            top: 20px; left: 20px;
+            position: absolute; top: 20px; left: 20px;
             background: rgba(255,255,255,0.1);
             padding: 10px 15px; border-radius: 8px;
             cursor: pointer; font-weight: bold;
@@ -51,6 +51,17 @@
             transition: 0.2s; z-index: 100;
         }
         .home-btn:hover { background: rgba(255,255,255,0.2); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+
+        /* --- SPECTATOR BADGE --- */
+        .spec-badge {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(250, 204, 21, 0.2); color: var(--spec-yellow);
+            padding: 8px 12px; border-radius: 8px; font-weight: bold;
+            border: 1px solid var(--spec-yellow);
+            display: none; z-index: 100;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
         /* --- LAYOUT --- */
         .layout {
@@ -179,7 +190,7 @@
         /* --- COIN FLIP ANIMATION --- */
         #coin-container {
             width: 150px; height: 150px; margin: 0 auto;
-            perspective: 800px; display: none; /* Hidden by default */
+            perspective: 800px; display: none;
         }
         #coin {
             width: 100%; height: 100%; position: relative;
@@ -202,6 +213,7 @@
 <body>
 
 <div class="home-btn" onclick="location.reload()">⌂ Home</div>
+<div class="spec-badge" id="specBadge">👁 SPECTATING</div>
 
 <div class="modal-overlay" id="gameOverModal">
     <div class="modal-box">
@@ -236,10 +248,10 @@
 
     <div class="sidebar">
         <div class="player-card">
-            <img id="oppAvatar" class="avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="opacity:0.5">
+            <img id="topAvatar" class="avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="opacity:0.5">
             <div class="player-info">
-                <span class="player-name" id="oppName">Opponent</span>
-                <div class="player-status" id="oppStatus">Offline</div>
+                <span class="player-name" id="topName">Opponent</span>
+                <div class="player-status" id="topStatus">Offline</div>
             </div>
             <div id="timer-top" class="timer">10:00</div>
         </div>
@@ -249,9 +261,9 @@
         </div>
 
         <div class="player-card">
-            <img id="myAvatarDisplay" class="avatar" src="https://www.w3schools.com/howto/img_avatar.png">
+            <img id="btmAvatar" class="avatar" src="https://www.w3schools.com/howto/img_avatar.png">
             <div class="player-info">
-                <span class="player-name" id="myNameDisplay">You</span>
+                <span class="player-name" id="btmName">You</span>
                 <div class="player-status" style="color:var(--win-green)">Online</div>
                 <div id="evalScore">Eval: 0.0</div>
             </div>
@@ -291,6 +303,10 @@
                 <button class="btn-resign" style="flex:1" onclick="resignGame()">Resign</button>
             </div>
         </div>
+        
+        <div id="specMsg" style="display:none; text-align:center; font-size:0.8rem; color:var(--spec-yellow); padding:10px;">
+            Spectator Mode Enabled (Read Only)
+        </div>
     </div>
 
 </div>
@@ -303,63 +319,57 @@
     var board = null;
     var game = new Chess();
     var peer = null;
-    var conn = null;
-    var stockfish = null;
+    var conn = null; // Main connection (for player)
+    var spectators = []; // Array for host to manage spectators
     
     var myName = "Player";
-    var oppName = "Opponent";
-    var myAvatar = "https://www.w3schools.com/howto/img_avatar.png"; // Default
-    var oppAvatar = "";
-    var mySide = 'w';
+    var myAvatar = "https://www.w3schools.com/howto/img_avatar.png"; 
+    
+    // Game Data
+    var p1Name = "Host", p2Name = "Guest";
+    var p1Avatar = "", p2Avatar = "";
+    var p1Side = 'w'; // Host side
+    var isSpectator = false;
 
     // Timer State
     var timeLimit = 10; 
-    var timeWhite = 600;
-    var timeBlack = 600;
+    var timeWhite = 600, timeBlack = 600;
     var timerInterval = null;
     var gameActive = false;
 
-    // --- 3. AVATAR HANDLING ---
-    // Listen for file upload
+    // --- 3. AVATAR UPLOAD ---
     $('#avatarInput').change(function(e){
         var file = e.target.files[0];
         if(file){
             var reader = new FileReader();
             reader.onload = function(evt){
-                myAvatar = evt.target.result; // Convert to Base64
-                $('#myAvatarDisplay').attr('src', myAvatar);
+                myAvatar = evt.target.result; 
+                $('#btmAvatar').attr('src', myAvatar);
             };
             reader.readAsDataURL(file);
         }
     });
 
-    // --- 4. COIN FLIP LOGIC ---
+    // --- 4. COIN FLIP (Host Only) ---
     function triggerCoinFlip(callback) {
         $('#coinFlipModal').css('display', 'flex');
         $('#coin-container').show();
         $('#coinResult').text("");
         
-        // Randomize: 0 = White, 1 = Black
-        // To animate, we spin a lot (e.g., 5 full rotations + outcome)
-        // White (0deg) | Black (180deg)
         var result = Math.random() > 0.5 ? 'w' : 'b'; 
-        var rotations = 1800; // 5 full spins (360 * 5)
+        var rotations = 1800; 
         var endAngle = (result === 'w') ? rotations : (rotations + 180);
         
-        // Apply Transform
         $('#coin').css({
             'transform': 'rotateY(' + endAngle + 'deg)',
             'transition': 'transform 3s cubic-bezier(0.2, 0.8, 0.2, 1)'
         });
 
-        // Wait for animation
         setTimeout(function() {
             var txt = (result === 'w') ? "YOU PLAY WHITE" : "YOU PLAY BLACK";
             $('#coinResult').text(txt).css('color', result === 'w' ? '#fff' : '#aaa');
-            
             setTimeout(function() {
                 $('#coinFlipModal').hide();
-                // Reset coin for next time
                 $('#coin').css({'transform': 'rotateY(0deg)', 'transition': 'none'});
                 callback(result);
             }, 1500);
@@ -367,6 +377,7 @@
     }
 
     // --- 5. ENGINE ---
+    var stockfish = null;
     try {
         stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js');
         stockfish.onmessage = function(event) {
@@ -374,7 +385,7 @@
             if(line.includes('score cp') || line.includes('score mate')) updateEvalUI(line);
         };
         stockfish.postMessage('uci');
-    } catch(e) { console.log("Stockfish failed."); }
+    } catch(e) {}
 
     function analyzePosition() {
         if(!stockfish) return;
@@ -387,7 +398,7 @@
         if(line.includes('mate')) {
             let m = line.split('mate ')[1].split(' ')[0];
             score = parseInt(m) > 0 ? 1000 : -1000;
-            text = "Mate in " + Math.abs(m);
+            text = "Mate " + m;
         } else {
             let cp = parseInt(line.split('score cp ')[1].split(' ')[0]);
             if(game.turn() === 'b') cp = -cp; 
@@ -400,11 +411,11 @@
         $('#evalBar').css('height', percent + '%');
     }
 
-    // --- 6. CONNECTION ---
+    // --- 6. CONNECTION & BROADCASTING ---
     function hostGame() {
         if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
         myName = $('#usernameInput').val();
-        updateNames();
+        updateUI();
         timeLimit = parseInt($('#timeSelect').val());
         initPeer(true);
     }
@@ -412,8 +423,8 @@
     function joinPrompt() {
         if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
         myName = $('#usernameInput').val();
-        updateNames();
-        const hostId = prompt("Enter Friend's Game ID:");
+        updateUI();
+        const hostId = prompt("Enter Game ID:");
         if(hostId) initPeer(false, hostId);
     }
 
@@ -425,162 +436,296 @@
             if (isHost) {
                 $('#myPeerId').text(id);
                 $('#idDisplay').show();
-                $('#oppStatus').text("Waiting for connection...");
+                $('#topStatus').text("Waiting for players...");
                 navigator.clipboard.writeText(id).then(() => alert("ID Copied!"));
             } else {
                 connectTo(hostId);
             }
         });
 
-        peer.on('connection', function(connection) {
-            conn = connection;
-            setupConnection(true);
+        // HOST RECEIVES CONNECTIONS
+        peer.on('connection', function(c) {
+            // First connection is Player 2
+            if(conn === null) {
+                conn = c;
+                setupHostConnection();
+            } else {
+                // Subsequent connections are Spectators
+                console.log("New spectator connected");
+                spectators.push(c);
+                setupSpectatorConnection(c);
+            }
         });
     }
 
     function connectTo(hostId) {
         conn = peer.connect(hostId);
-        setupConnection(false);
+        setupClientConnection();
     }
 
-    function setupConnection(isHost) {
+    // --- HOST LOGIC ---
+    function setupHostConnection() {
         conn.on('open', function() {
-            if(isHost) {
-                $('#oppStatus').text("Connected! Flipping Coin...");
+            $('#topStatus').text("Connected! Flipping Coin...");
+            
+            triggerCoinFlip(function(hostSide) {
+                p1Side = hostSide; // Host Side
+                p1Name = myName;
+                p1Avatar = myAvatar;
                 
-                // HOST TRIGGERS ANIMATION
-                triggerCoinFlip(function(hostSide) {
-                    mySide = hostSide;
-                    var guestSide = (mySide === 'w') ? 'b' : 'w';
-                    
-                    board.orientation(mySide === 'w' ? 'white' : 'black');
-                    
-                    // Send Config + Avatar
-                    sendData({ 
-                        type: 'init', 
-                        name: myName,
-                        avatar: myAvatar, // Send my avatar
-                        side: guestSide,
-                        timeLimit: timeLimit 
-                    });
-                    
-                    startGame();
+                // Init Guest
+                var guestSide = (p1Side === 'w') ? 'b' : 'w';
+                board.orientation(p1Side === 'w' ? 'white' : 'black');
+
+                // Send Init to Guest
+                broadcastData({ 
+                    type: 'init', 
+                    p1Name: p1Name, p1Avatar: p1Avatar,
+                    p1Side: p1Side,
+                    timeLimit: timeLimit 
                 });
-
-            } else {
-                $('#oppStatus').text("Connected! Waiting for Host...").css('color', '#4ade80');
-            }
+                
+                startGame();
+            });
         });
-
+        
         conn.on('data', function(data) { handleData(data); });
-        conn.on('close', function() { alert("Opponent disconnected"); location.reload(); });
+        conn.on('close', function() { alert("Player disconnected"); });
     }
 
-    function sendData(obj) { if(conn && conn.open) conn.send(obj); }
+    // Handles a new Spectator
+    function setupSpectatorConnection(specConn) {
+        specConn.on('open', function() {
+            // Send current game state immediately
+            specConn.send({
+                type: 'spectate_init',
+                fen: game.fen(),
+                p1Name: p1Name, p1Avatar: p1Avatar,
+                p2Name: p2Name, p2Avatar: p2Avatar,
+                p1Side: p1Side,
+                timeLimit: timeLimit,
+                timeWhite: timeWhite, timeBlack: timeBlack
+            });
+        });
+    }
 
+    // Send to Opponent AND all Spectators
+    function broadcastData(obj) {
+        // Send to Player 2
+        if(conn && conn.open) conn.send(obj);
+        // Send to Spectators
+        spectators.forEach(s => { if(s.open) s.send(obj); });
+    }
+
+    // --- CLIENT (GUEST) LOGIC ---
+    function setupClientConnection() {
+        conn.on('open', function() {
+            $('#topStatus').text("Connected! Waiting for Host...");
+        });
+        conn.on('data', function(data) { handleData(data); });
+        conn.on('close', function() { alert("Host disconnected"); });
+    }
+
+    // --- DATA HANDLING ---
     function handleData(data) {
-        if(data.type === 'init') {
-            oppName = data.name;
-            mySide = data.side;
+        
+        // --- SPECTATOR INIT ---
+        if(data.type === 'spectate_init') {
+            isSpectator = true;
+            $('#specBadge').show();
+            $('#gameControls').hide();
+            $('#specMsg').show();
+            $('#connectPanel').hide();
+            
+            // Sync State
+            game.load(data.fen);
+            board.position(data.fen);
+            p1Name = data.p1Name; p1Avatar = data.p1Avatar;
+            p2Name = data.p2Name; p2Avatar = data.p2Avatar;
+            p1Side = data.p1Side;
+            
+            // Sync Timers
+            timeLimit = data.timeLimit;
+            timeWhite = data.timeWhite;
+            timeBlack = data.timeBlack;
+            
+            // Setup View (Spectators view as White usually)
+            board.orientation('white'); 
+            
+            // Set Names UI for Spectator (Host is Top, Guest is Bottom usually, or explicit)
+            // Let's standardize: White Bottom, Black Top for spectator
+            updateSpectatorUI();
+            
+            if(!gameActive) startGameTimer(); // Start timer listener
+        }
+
+        // --- PLAYER INIT ---
+        else if(data.type === 'init') {
+            // I am Guest (Player 2)
+            p1Name = data.p1Name; 
+            p1Avatar = data.p1Avatar;
+            p1Side = data.p1Side; // Host's side
+            
+            // My Side is opposite
+            var mySide = (p1Side === 'w') ? 'b' : 'w';
             timeLimit = data.timeLimit;
             
-            // Handle Opponent Avatar
-            if(data.avatar) {
-                oppAvatar = data.avatar;
-                $('#oppAvatar').attr('src', oppAvatar).css('opacity', 1);
-            }
-
-            updateNames();
+            // Setup UI
+            $('#btmName').text(myName);
+            $('#btmAvatar').attr('src', myAvatar);
+            
+            $('#topName').text(p1Name);
+            $('#topAvatar').attr('src', p1Avatar).css('opacity', 1);
+            
             board.orientation(mySide === 'w' ? 'white' : 'black');
             
-            // Send back my Name and Avatar
-            sendData({ type: 'name', name: myName, avatar: myAvatar });
+            // Send my info back to Host
+            conn.send({ type: 'guest_info', name: myName, avatar: myAvatar });
+            
             startGame();
         }
-        else if(data.type === 'name') {
-            oppName = data.name;
-            if(data.avatar) {
-                $('#oppAvatar').attr('src', data.avatar).css('opacity', 1);
-            }
-            updateNames();
+        
+        // --- HOST RECEIVES GUEST INFO ---
+        else if(data.type === 'guest_info') {
+            p2Name = data.name;
+            p2Avatar = data.avatar;
+            
+            $('#topName').text(p2Name);
+            $('#topAvatar').attr('src', p2Avatar).css('opacity', 1);
+            
+            // Broadcast full roster to spectators now that P2 joined
+            broadcastData({ type: 'update_roster', p2Name: p2Name, p2Avatar: p2Avatar });
         }
+        
+        // --- ROSTER UPDATE (For Spectators) ---
+        else if(data.type === 'update_roster') {
+            p2Name = data.p2Name;
+            p2Avatar = data.p2Avatar;
+            if(isSpectator) updateSpectatorUI();
+        }
+
+        // --- MOVES ---
         else if(data.type === 'move') {
             game.move(data.move);
             board.position(game.fen());
             updateStatus();
+            
+            // If I am Host, broadcast this move to spectators
+            if(peer && !conn.peer) { // Crude check if Host
+                spectators.forEach(s => { if(s.open) s.send(data); });
+            }
         }
-        else if(data.type === 'resign') {
-            endGame("YOU WIN!", oppName + " resigned.");
+        
+        // --- SYNC TIME (Host sends this periodically or on move) ---
+        else if(data.type === 'time_sync') {
+            timeWhite = data.w;
+            timeBlack = data.b;
+            updateTimersDisplay();
         }
+        
+        else if(data.type === 'resign') endGame("GAME OVER", "Player Resigned");
         else if(data.type === 'draw_offer') {
-            if(confirm(oppName + " offers a draw?")) {
-                sendData({ type: 'draw_accept' });
-                endGame("DRAW", "Agreement");
-            } else {
-                sendData({ type: 'draw_decline' });
+            if(!isSpectator) {
+                if(confirm("Opponent offers draw?")) {
+                    broadcastData({ type: 'draw_accept' });
+                    endGame("DRAW", "Agreement");
+                } else broadcastData({ type: 'draw_decline' });
             }
         }
         else if(data.type === 'draw_accept') endGame("DRAW", "Agreement");
-        else if(data.type === 'draw_decline') alert("Draw declined.");
     }
 
-    // --- 7. GAME LOGIC ---
+    // --- UI HELPERS ---
+    function updateUI() {
+        $('#btmName').text(myName);
+        $('#btmAvatar').attr('src', myAvatar);
+    }
+    
+    function updateSpectatorUI() {
+        // Spec always sees White at Bottom
+        $('#btmName').text(p1Side === 'w' ? p1Name : p2Name);
+        $('#btmAvatar').attr('src', p1Side === 'w' ? p1Avatar : p2Avatar);
+        
+        $('#topName').text(p1Side === 'w' ? p2Name : p1Name);
+        $('#topAvatar').attr('src', p1Side === 'w' ? p2Avatar : p1Avatar);
+    }
+
+    // --- GAME LOGIC ---
     function startGame() {
         timeWhite = timeLimit * 60;
         timeBlack = timeLimit * 60;
-        gameActive = true;
-        
+        startGameTimer();
         $('#connectPanel').hide();
-        $('#gameControls').show();
-        updateNames();
+        if(!isSpectator) $('#gameControls').show();
         updateTimersDisplay();
-        
-        if(timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(timerLoop, 1000);
-        
         setTimeout(board.resize, 200);
         analyzePosition();
+    }
+    
+    function startGameTimer() {
+        gameActive = true;
+        if(timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(timerLoop, 1000);
     }
 
     function timerLoop() {
         if(!gameActive) return;
-        if(game.turn() === 'w') {
-            timeWhite--;
-            if(timeWhite <= 0) endGame("BLACK WINS", "Time");
-        } else {
-            timeBlack--;
-            if(timeBlack <= 0) endGame("WHITE WINS", "Time");
+        
+        // Host manages "Official" time
+        if(peer && !conn.peer && !isSpectator) {
+             if(game.turn() === 'w') timeWhite--; else timeBlack--;
+             
+             // Sync occasionally (every 5s) to keep specs roughly aligned
+             if(timeWhite % 5 === 0) broadcastData({ type: 'time_sync', w: timeWhite, b: timeBlack });
+             
+             if(timeWhite <= 0 || timeBlack <= 0) {
+                 var msg = (timeWhite <= 0) ? "BLACK WINS" : "WHITE WINS";
+                 broadcastData({ type: 'timeout', msg: msg });
+                 endGame(msg, "Time Out");
+             }
+        } 
+        // Clients/Specs just tick locally for smoothness
+        else {
+             if(game.turn() === 'w') timeWhite--; else timeBlack--;
         }
         updateTimersDisplay();
     }
 
     function updateTimersDisplay() {
-        const fmt = (t) => {
-            let m = Math.floor(t / 60);
-            let s = t % 60;
-            return `${m}:${s<10?'0':''}${s}`;
-        };
-        let myTime, oppTime, myTurn;
-        if(mySide === 'w') {
-            myTime = timeWhite; oppTime = timeBlack; myTurn = (game.turn() === 'w');
-        } else {
-            myTime = timeBlack; oppTime = timeWhite; myTurn = (game.turn() === 'b');
-        }
-        $('#timer-btm').text(fmt(myTime)).toggleClass('active', myTurn);
-        $('#timer-top').text(fmt(oppTime)).toggleClass('active', !myTurn);
+        const fmt = (t) => { let m=Math.floor(t/60), s=t%60; return `${m}:${s<10?'0':''}${s}`; };
+        
+        // Display Logic relies on Board Orientation
+        // If board is White: Bottom = White Time
+        var orientation = board.orientation(); // 'white' or 'black'
+        
+        var btmTime = (orientation === 'white') ? timeWhite : timeBlack;
+        var topTime = (orientation === 'white') ? timeBlack : timeWhite;
+        
+        $('#timer-btm').text(fmt(btmTime));
+        $('#timer-top').text(fmt(topTime));
+        
+        var isWhiteTurn = (game.turn() === 'w');
+        $('#timer-btm').toggleClass('active', (orientation === 'white' && isWhiteTurn) || (orientation === 'black' && !isWhiteTurn));
+        $('#timer-top').toggleClass('active', (orientation === 'white' && !isWhiteTurn) || (orientation === 'black' && isWhiteTurn));
     }
 
     function onDragStart(source, piece) {
-        if (!gameActive || game.game_over()) return false;
-        if ((game.turn() === 'w' && piece.search(/^b/) !== -1) || (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
-        if ((game.turn() === 'w' && mySide !== 'w') || (game.turn() === 'b' && mySide !== 'b')) return false;
+        if (!gameActive || isSpectator || game.game_over()) return false;
+        
+        // My Side Validation
+        var amIWhite = (p1Side === 'w' && p1Name === myName) || (p1Side === 'b' && p1Name !== myName);
+        if(amIWhite && piece.search(/^b/) !== -1) return false;
+        if(!amIWhite && piece.search(/^w/) !== -1) return false;
+        
+        if ((game.turn() === 'w' && !amIWhite) || (game.turn() === 'b' && amIWhite)) return false;
     }
 
     function onDrop(source, target) {
         var moveObj = { from: source, to: target, promotion: 'q' };
         var move = game.move(moveObj);
         if (move === null) return 'snapback';
-        sendData({ type: 'move', move: moveObj });
+        
+        broadcastData({ type: 'move', move: moveObj });
         updateStatus();
     }
 
@@ -594,11 +739,7 @@
         updateTimersDisplay();
         analyzePosition();
 
-        if (game.in_checkmate()) {
-            let winner = (game.turn() === 'w') ? "BLACK" : "WHITE";
-            let msg = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? "YOU WIN!" : "YOU LOSE";
-            endGame(msg, "Checkmate");
-        } 
+        if (game.in_checkmate()) endGame("CHECKMATE", "Game Over");
         else if (game.in_draw()) endGame("DRAW", "Stalemate");
     }
 
@@ -612,19 +753,12 @@
 
     function resignGame() {
         if(confirm("Resign?")) {
-            sendData({ type: 'resign' });
+            broadcastData({ type: 'resign' });
             endGame("YOU LOSE", "Resigned");
         }
     }
     function offerDraw() {
-        if(confirm("Offer Draw?")) {
-            sendData({ type: 'draw_offer' });
-        }
-    }
-
-    function updateNames() {
-        $('#myNameDisplay').text(myName);
-        $('#oppName').text(oppName);
+        if(confirm("Offer Draw?")) broadcastData({ type: 'draw_offer' });
     }
     function copyId() {
         var txt = $('#myPeerId').text();
