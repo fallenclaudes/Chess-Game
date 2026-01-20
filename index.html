@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Titans - Multiplayer</title>
+    <title>Chess Titans</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
@@ -12,37 +12,25 @@
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 
     <style>
-        /* --- THEME CONFIG --- */
         :root {
-            --bg-gradient-start: #0f172a;
-            --bg-gradient-end: #1e293b;
-            --panel-glass: rgba(30, 41, 59, 0.9);
-            --text-glow: #e2e8f0;
-            --accent: #38bdf8;
-            --win-green: #4ade80;
-            --loss-red: #f87171;
-            --spec-yellow: #facc15;
-            --board-white: #e2e2e2;
-            --board-black: #5a6e80;
+            --bg-gradient-start: #0f172a; --bg-gradient-end: #1e293b;
+            --panel-glass: rgba(30, 41, 59, 0.95); --text-glow: #e2e8f0;
+            --accent: #38bdf8; --win-green: #4ade80; --loss-red: #f87171; --spec-yellow: #facc15;
+            --board-white: #e2e2e2; --board-black: #5a6e80;
         }
 
         body {
             background: radial-gradient(circle at center, var(--bg-gradient-end), var(--bg-gradient-start));
-            color: var(--text-glow);
-            font-family: 'Segoe UI', Tahoma, sans-serif;
+            color: var(--text-glow); font-family: 'Segoe UI', Tahoma, sans-serif;
             display: flex; justify-content: center; align-items: center;
             min-height: 100vh; margin: 0; overflow: hidden;
         }
 
-        /* --- UI ELEMENTS --- */
         .home-btn {
             position: absolute; top: 20px; left: 20px;
             background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 8px;
-            cursor: pointer; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
-            transition: 0.2s; z-index: 100;
+            cursor: pointer; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); z-index: 100;
         }
-        .home-btn:hover { background: rgba(255,255,255,0.2); }
-
         .spec-badge {
             position: absolute; top: 20px; right: 20px;
             background: rgba(250, 204, 21, 0.2); color: var(--spec-yellow);
@@ -53,124 +41,47 @@
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
         .layout { display: flex; gap: 20px; align-items: center; padding: 20px; }
+        
+        .eval-wrapper { width: 25px; height: 560px; background: #111; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; position: relative; overflow: hidden; }
+        .eval-fill { width: 100%; height: 50%; background: linear-gradient(to top, #ffffff, #a0a0a0); position: absolute; bottom: 0; transition: height 1s ease; }
 
-        /* --- EVAL BAR --- */
-        .eval-wrapper {
-            width: 25px; height: 560px; background: #111;
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
-            position: relative; overflow: hidden;
-        }
-        .eval-fill {
-            width: 100%; height: 50%;
-            background: linear-gradient(to top, #ffffff, #a0a0a0);
-            position: absolute; bottom: 0; transition: height 1s ease;
-        }
-
-        /* --- BOARD --- */
-        .board-wrapper {
-            width: 560px; height: 560px; position: relative;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            border: 5px solid #333; border-radius: 4px;
-        }
+        .board-wrapper { width: 560px; height: 560px; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.8); border: 5px solid #333; border-radius: 4px; }
         #myBoard { width: 100%; height: 100%; }
 
-        /* --- SIDEBAR --- */
-        .sidebar {
-            width: 320px; height: 560px;
-            background: var(--panel-glass);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px; display: flex; flex-direction: column;
-            backdrop-filter: blur(15px);
-        }
-
-        .player-card {
-            padding: 15px; display: flex; align-items: center; gap: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .avatar {
-            width: 50px; height: 50px; border-radius: 50%;
-            border: 2px solid var(--accent); object-fit: cover; background: #000;
-        }
-        
+        .sidebar { width: 320px; height: 560px; background: var(--panel-glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; display: flex; flex-direction: column; }
+        .player-card { padding: 15px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; background: #000; }
         .player-info { flex-grow: 1; }
-        .player-name {
-            font-weight: 800; color: #fff; text-transform: uppercase;
-            letter-spacing: 1px; font-size: 1.0rem;
-        }
+        .player-name { font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 1px; font-size: 1.0rem; }
         .player-status { font-size: 0.75rem; color: var(--accent); margin-top: 4px; }
-
-        .timer {
-            font-family: 'Courier New', monospace; font-size: 1.4rem;
-            padding: 5px 10px; background: rgba(0,0,0,0.4);
-            border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); color: #888;
-        }
+        .timer { font-family: 'Courier New', monospace; font-size: 1.4rem; padding: 5px 10px; background: rgba(0,0,0,0.4); border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); color: #888; }
         .timer.active { color: #fff; border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
 
         .log-area { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.9rem; background: rgba(0,0,0,0.2); }
         .move-row { display: flex; padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        .controls {
-            padding: 20px; display: flex; flex-direction: column; gap: 10px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        input, select {
-            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
-            color: #fff; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box;
-            text-align: center; margin-bottom: 5px; outline: none;
-        }
+        .controls { padding: 20px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+        input, select { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px; border-radius: 6px; width: 100%; text-align: center; outline: none; }
+        .file-upload { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 6px; }
         
-        .file-upload {
-            display: flex; gap: 10px; align-items: center; margin-bottom: 10px;
-            background: rgba(255,255,255,0.05); padding: 5px; border-radius: 6px;
-        }
-        input[type="file"] { font-size: 0.8rem; padding: 5px; }
-
-        button {
-            padding: 12px; border: none; border-radius: 6px; font-weight: 700;
-            cursor: pointer; text-transform: uppercase; font-size: 0.8rem;
-            background: rgba(255,255,255,0.1); color: #fff; transition: 0.2s;
-        }
+        button { padding: 12px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.8rem; background: rgba(255,255,255,0.1); color: #fff; transition: 0.2s; }
         button:hover { background: rgba(255,255,255,0.2); }
         .btn-primary { background: var(--accent); color: #0f172a; }
         .btn-spec { border: 1px solid var(--spec-yellow); color: var(--spec-yellow); background: transparent; }
         .btn-draw { border: 1px solid #fbbf24; color: #fbbf24; background: transparent; }
         .btn-resign { border: 1px solid var(--loss-red); color: var(--loss-red); background: transparent; }
 
-        /* MODALS */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; z-index: 999;
-            justify-content: center; align-items: center;
-        }
-        .modal-box {
-            background: #1e293b; padding: 30px; border-radius: 12px;
-            text-align: center; border: 1px solid var(--accent);
-            box-shadow: 0 0 40px var(--accent-glow);
-            max-width: 400px; width: 90%;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 999; justify-content: center; align-items: center; }
+        .modal-box { background: #1e293b; padding: 30px; border-radius: 12px; text-align: center; border: 1px solid var(--accent); box-shadow: 0 0 40px var(--accent-glow); width: 300px; }
 
-        /* --- COIN FLIP ANIMATION --- */
-        #coin-container {
-            width: 150px; height: 150px; margin: 0 auto;
-            perspective: 800px; display: none;
-        }
-        #coin {
-            width: 100%; height: 100%; position: relative;
-            transform-style: preserve-3d;
-            transition: transform 3s ease-out;
-        }
-        .coin-face {
-            position: absolute; width: 100%; height: 100%;
-            border-radius: 50%; backface-visibility: hidden;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5rem; font-weight: bold; border: 4px solid #999;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-        }
+        /* Coin Animation */
+        #coin-container { width: 150px; height: 150px; margin: 0 auto; perspective: 800px; display: none; }
+        #coin { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 3s ease-out; }
+        .coin-face { position: absolute; width: 100%; height: 100%; border-radius: 50%; backface-visibility: hidden; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; font-weight: bold; border: 4px solid #999; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
         .coin-white { background: #e2e2e2; color: #000; transform: rotateY(0deg); }
         .coin-black { background: #333; color: #fff; transform: rotateY(180deg); }
-
+        #coinResult { margin-top:20px; font-weight:bold; height:20px; font-size: 0.9rem; }
+        
         #evalScore { font-size: 10px; text-align: center; margin-top: 5px; opacity: 0.7; font-family: monospace; }
     </style>
 </head>
@@ -196,7 +107,7 @@
                 <div class="coin-face coin-black">BLACK</div>
             </div>
         </div>
-        <div id="coinResult" style="margin-top:20px; font-weight:bold; height:20px;"></div>
+        <div id="coinResult"></div>
     </div>
 </div>
 
@@ -234,7 +145,6 @@
                 <span style="font-size:0.8rem; color:#aaa;">Avatar:</span>
                 <input type="file" id="avatarInput" accept="image/*">
             </div>
-            <label style="font-size:0.8rem; color:#aaa; margin-left:4px;">Time Control:</label>
             <select id="timeSelect">
                 <option value="1">1 Min (Bullet)</option>
                 <option value="3">3 Min (Blitz)</option>
@@ -287,7 +197,8 @@
     var timerInterval = null;
     var gameActive = false;
 
-    // --- CRITICAL FIX: STUN SERVERS ---
+    // --- STUN/TURN CONFIG ---
+    // Using standard Google STUN servers.
     var peerConfig = {
         config: { 'iceServers': [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -304,8 +215,11 @@
         }
     });
 
-    // --- COIN FLIP (Shared Animation) ---
-    function triggerCoinFlipAnimation(result, callback) {
+    // --- LOGIC FIXED: COIN FLIP ANIMATION ---
+    // If result is 'w', Host is White.
+    // If I am Host -> I play White.
+    // If I am Guest -> I play Black.
+    function triggerCoinFlipAnimation(result, amIHost, callback) {
         $('#coinFlipModal').css('display', 'flex');
         $('#coin-container').show();
         $('#coinResult').text("");
@@ -319,13 +233,28 @@
         });
 
         setTimeout(function() {
-            var txt = (result === 'w') ? "WHITE" : "BLACK";
-            $('#coinResult').text(txt).css('color', result === 'w' ? '#fff' : '#aaa');
+            // FIX: Context-aware text
+            var coinFace = (result === 'w') ? "WHITE" : "BLACK";
+            var outcome = "";
+            
+            if (amIHost) {
+                // I am Host. Coin is My Side.
+                outcome = (result === 'w') ? "YOU ARE WHITE" : "YOU ARE BLACK";
+            } else {
+                // I am Guest. Coin is Host's side.
+                // If Coin is White, Host is White, I am Black.
+                outcome = (result === 'w') ? "OPPONENT IS WHITE (YOU ARE BLACK)" : "OPPONENT IS BLACK (YOU ARE WHITE)";
+            }
+            
+            var msg = `COIN: ${coinFace}<br><span style="color:var(--accent)">${outcome}</span>`;
+
+            $('#coinResult').html(msg).css('color', '#fff');
+            
             setTimeout(function() {
                 $('#coinFlipModal').hide();
                 $('#coin').css({'transform': 'rotateY(0deg)', 'transition': 'none'});
                 if(callback) callback();
-            }, 1500);
+            }, 2500);
         }, 3000);
     }
 
@@ -357,7 +286,7 @@
 
     function initPeer(hosting, hostId = null, role = null) {
         if(peer) peer.destroy();
-        peer = new Peer(peerConfig); // USING STUN SERVERS
+        peer = new Peer(peerConfig);
 
         peer.on('open', function(id) {
             if (hosting) {
@@ -378,10 +307,7 @@
                     player2Conn = c;
                     setupHostPlayerConnection(c);
                 } else {
-                    c.on('open', () => {
-                        c.send({type: 'error', msg: 'Game Full'});
-                        setTimeout(() => c.close(), 500);
-                    });
+                    c.on('open', () => { c.send({type: 'error', msg: 'Game Full'}); setTimeout(() => c.close(), 500); });
                 }
             } else if (mode === 'spectator') {
                 spectators.push(c);
@@ -389,14 +315,11 @@
             }
         });
 
-        peer.on('error', function(err) {
-            alert("Connection Error: " + err.type + "\nTry a different network or browser.");
-        });
+        peer.on('error', function(err) { alert("Connection Error: " + err.type); });
     }
 
     function connectTo(hostId, role) {
         conn = peer.connect(hostId, { metadata: { mode: role } });
-        
         if (role === 'spectator') {
             isSpectator = true;
             $('#specBadge').show();
@@ -413,32 +336,20 @@
     function setupHostPlayerConnection(c) {
         c.on('open', function() {
             $('#topStatus').text("Connected! Synchronizing...");
-            
-            // 1. Host decides side
             var hostSide = Math.random() > 0.5 ? 'w' : 'b';
             p1Side = hostSide; 
-            p1Name = myName;
-            p1Avatar = myAvatar;
+            p1Name = myName; p1Avatar = myAvatar;
 
-            // 2. Tell Client to prepare for coin flip
+            // Tell Client to flip
             c.send({ type: 'prepare_flip', side: hostSide });
             
-            // 3. Trigger Local Animation
-            triggerCoinFlipAnimation(hostSide, function() {
-                // Animation Done.
+            // Host Animation (True = Am Host)
+            triggerCoinFlipAnimation(hostSide, true, function() {
                 board.orientation(p1Side === 'w' ? 'white' : 'black');
-                
-                // 4. Send Game Init
-                c.send({ 
-                    type: 'init', 
-                    p1Name: p1Name, p1Avatar: p1Avatar,
-                    p1Side: p1Side,
-                    timeLimit: timeLimit 
-                });
+                c.send({ type: 'init', p1Name: p1Name, p1Avatar: p1Avatar, p1Side: p1Side, timeLimit: timeLimit });
                 startGame();
             });
         });
-        
         c.on('data', function(data) { handleData(data); });
         c.on('close', function() { alert("Player 2 disconnected"); player2Conn = null; });
     }
@@ -457,11 +368,8 @@
         });
     }
 
-    // --- CLIENT LOGIC ---
     function setupClientConnection() {
-        conn.on('open', function() {
-            $('#topStatus').text("Connected! Waiting for Host...");
-        });
+        conn.on('open', function() { $('#topStatus').text("Connected! Waiting for Host..."); });
         conn.on('data', function(data) { handleData(data); });
         conn.on('close', function() { alert("Host disconnected"); });
     }
@@ -476,10 +384,8 @@
         if(data.type === 'error') { alert(data.msg); location.reload(); return; }
 
         if (data.type === 'prepare_flip') {
-            // SYNCED ANIMATION: Client triggers animation same time as Host
-            triggerCoinFlipAnimation(data.side, function() {
-                 // Animation done. Waiting for 'init' packet.
-            });
+            // Guest Animation (False = Am Not Host)
+            triggerCoinFlipAnimation(data.side, false, function() {});
         }
 
         else if(data.type === 'spectate_init') {
@@ -492,7 +398,8 @@
             timeWhite = data.timeWhite; timeBlack = data.timeBlack;
             updateSpectatorUI();
             board.orientation('white'); 
-            if(!gameActive) startGameTimer();
+            // Fix: Ensure we know game is running
+            if(data.fen !== 'start' || data.timeWhite !== data.timeBlack) startGameTimer();
         }
 
         else if(data.type === 'init') {
@@ -500,10 +407,8 @@
             timeLimit = data.timeLimit;
             var mySide = (p1Side === 'w') ? 'b' : 'w';
             
-            $('#btmName').text(myName);
-            $('#btmAvatar').attr('src', myAvatar);
-            $('#topName').text(p1Name);
-            $('#topAvatar').attr('src', p1Avatar).css('opacity', 1);
+            $('#btmName').text(myName); $('#btmAvatar').attr('src', myAvatar);
+            $('#topName').text(p1Name); $('#topAvatar').attr('src', p1Avatar).css('opacity', 1);
             
             board.orientation(mySide === 'w' ? 'white' : 'black');
             conn.send({ type: 'guest_info', name: myName, avatar: myAvatar });
@@ -512,8 +417,7 @@
 
         else if(data.type === 'guest_info') {
             p2Name = data.name; p2Avatar = data.avatar;
-            $('#topName').text(p2Name);
-            $('#topAvatar').attr('src', p2Avatar).css('opacity', 1);
+            $('#topName').text(p2Name); $('#topAvatar').attr('src', p2Avatar).css('opacity', 1);
             broadcastData({ type: 'update_roster', p2Name: p2Name, p2Avatar: p2Avatar });
         }
 
@@ -540,15 +444,13 @@
                 if(isHost) { broadcastData({ type: 'draw_accept' }); endGame("DRAW", "Agreement"); }
                 else { conn.send({ type: 'draw_accept' }); endGame("DRAW", "Agreement"); }
              } else {
-                if(isHost) broadcastData({ type: 'draw_decline' });
-                else conn.send({ type: 'draw_decline' });
+                if(isHost) broadcastData({ type: 'draw_decline' }); else conn.send({ type: 'draw_decline' });
              }
         }
         else if(data.type === 'draw_accept') endGame("DRAW", "Agreement");
         else if(data.type === 'draw_decline') alert("Draw Declined");
     }
 
-    // --- UI & GAME ---
     function updateUI() { $('#btmName').text(myName); $('#btmAvatar').attr('src', myAvatar); }
     
     function updateSpectatorUI() {
@@ -565,10 +467,7 @@
         startGameTimer();
         $('#connectPanel').hide();
         if(!isSpectator) $('#gameControls').show();
-        
-        // CLEAR STATUS
         $('#topStatus').text("Online").css('color', 'var(--win-green)');
-        
         updateTimersDisplay();
         setTimeout(board.resize, 200);
         analyzePosition();
@@ -649,7 +548,6 @@
     function offerDraw() { if(confirm("Offer Draw?")) { if(isHost) broadcastData({ type: 'draw_offer' }); else conn.send({ type: 'draw_offer' }); } }
     function copyId() { var txt = $('#myPeerId').text(); navigator.clipboard.writeText(txt); alert("ID Copied: " + txt); }
 
-    // --- ENGINE ---
     var stockfish = null;
     try {
         stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js');
