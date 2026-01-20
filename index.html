@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Gods</title>
+    <title>Chess Titans - Multiplayer</title>
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
@@ -19,12 +19,9 @@
             --panel-glass: rgba(30, 41, 59, 0.9);
             --text-glow: #e2e8f0;
             --accent: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.4);
             --win-green: #4ade80;
             --loss-red: #f87171;
             --spec-yellow: #facc15;
-            
-            /* Board Colors */
             --board-white: #e2e2e2;
             --board-black: #5a6e80;
         }
@@ -33,54 +30,40 @@
             background: radial-gradient(circle at center, var(--bg-gradient-end), var(--bg-gradient-start));
             color: var(--text-glow);
             font-family: 'Segoe UI', Tahoma, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; overflow: hidden;
         }
 
-        /* --- HOME BUTTON --- */
+        /* --- UI ELEMENTS --- */
         .home-btn {
             position: absolute; top: 20px; left: 20px;
-            background: rgba(255,255,255,0.1);
-            padding: 10px 15px; border-radius: 8px;
-            cursor: pointer; font-weight: bold;
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 8px;
+            cursor: pointer; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);
             transition: 0.2s; z-index: 100;
         }
-        .home-btn:hover { background: rgba(255,255,255,0.2); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+        .home-btn:hover { background: rgba(255,255,255,0.2); }
 
-        /* --- SPECTATOR BADGE --- */
         .spec-badge {
             position: absolute; top: 20px; right: 20px;
             background: rgba(250, 204, 21, 0.2); color: var(--spec-yellow);
             padding: 8px 12px; border-radius: 8px; font-weight: bold;
-            border: 1px solid var(--spec-yellow);
-            display: none; z-index: 100;
+            border: 1px solid var(--spec-yellow); display: none; z-index: 100;
             animation: pulse 2s infinite;
         }
         @keyframes pulse { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
 
-        /* --- LAYOUT --- */
-        .layout {
-            display: flex; gap: 20px; align-items: center;
-            backdrop-filter: blur(10px); padding: 20px;
-        }
+        .layout { display: flex; gap: 20px; align-items: center; padding: 20px; }
 
         /* --- EVAL BAR --- */
         .eval-wrapper {
             width: 25px; height: 560px; background: #111;
             border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
             position: relative; overflow: hidden;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         .eval-fill {
             width: 100%; height: 50%;
             background: linear-gradient(to top, #ffffff, #a0a0a0);
             position: absolute; bottom: 0; transition: height 1s ease;
-            box-shadow: 0 0 10px white;
         }
 
         /* --- BOARD --- */
@@ -91,16 +74,6 @@
         }
         #myBoard { width: 100%; height: 100%; }
 
-        .white-1e1d7 {
-            background-color: var(--board-white);
-            background-image: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
-        }
-        .black-3c85d {
-            background-color: var(--board-black);
-            background-image: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 100%);
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
         /* --- SIDEBAR --- */
         .sidebar {
             width: 320px; height: 560px;
@@ -108,7 +81,6 @@
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 12px; display: flex; flex-direction: column;
             backdrop-filter: blur(15px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .player-card {
@@ -116,18 +88,15 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* AVATAR STYLES */
         .avatar {
             width: 50px; height: 50px; border-radius: 50%;
-            border: 2px solid var(--accent);
-            object-fit: cover; background: #000;
+            border: 2px solid var(--accent); object-fit: cover; background: #000;
         }
         
         .player-info { flex-grow: 1; }
         .player-name {
-            font-weight: 800; color: #fff;      
-            text-shadow: 0 0 8px rgba(255,255,255,0.4); 
-            text-transform: uppercase; letter-spacing: 1px; font-size: 1.0rem;
+            font-weight: 800; color: #fff; text-transform: uppercase;
+            letter-spacing: 1px; font-size: 1.0rem;
         }
         .player-status { font-size: 0.75rem; color: var(--accent); margin-top: 4px; }
 
@@ -136,10 +105,7 @@
             padding: 5px 10px; background: rgba(0,0,0,0.4);
             border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); color: #888;
         }
-        .timer.active {
-            color: #fff; border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
-        }
+        .timer.active { color: #fff; border-color: var(--accent); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
 
         .log-area { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.9rem; background: rgba(0,0,0,0.2); }
         .move-row { display: flex; padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -155,7 +121,6 @@
             text-align: center; margin-bottom: 5px; outline: none;
         }
         
-        /* FILE INPUT */
         .file-upload {
             display: flex; gap: 10px; align-items: center; margin-bottom: 10px;
             background: rgba(255,255,255,0.05); padding: 5px; border-radius: 6px;
@@ -169,11 +134,7 @@
         }
         button:hover { background: rgba(255,255,255,0.2); }
         .btn-primary { background: var(--accent); color: #0f172a; }
-        .btn-primary:hover { background: #7dd3fc; box-shadow: 0 0 15px var(--accent-glow); }
-        
         .btn-spec { border: 1px solid var(--spec-yellow); color: var(--spec-yellow); background: transparent; }
-        .btn-spec:hover { background: rgba(250, 204, 21, 0.1); }
-        
         .btn-draw { border: 1px solid #fbbf24; color: #fbbf24; background: transparent; }
         .btn-resign { border: 1px solid var(--loss-red); color: var(--loss-red); background: transparent; }
 
@@ -240,14 +201,8 @@
 </div>
 
 <div class="layout">
-    
-    <div class="eval-wrapper">
-        <div class="eval-fill" id="evalBar"></div>
-    </div>
-
-    <div class="board-wrapper" id="boardContainer">
-        <div id="myBoard"></div>
-    </div>
+    <div class="eval-wrapper"><div class="eval-fill" id="evalBar"></div></div>
+    <div class="board-wrapper" id="boardContainer"><div id="myBoard"></div></div>
 
     <div class="sidebar">
         <div class="player-card">
@@ -275,12 +230,10 @@
 
         <div class="controls" id="connectPanel">
             <input type="text" id="usernameInput" placeholder="Enter Your Name">
-            
             <div class="file-upload">
                 <span style="font-size:0.8rem; color:#aaa;">Avatar:</span>
                 <input type="file" id="avatarInput" accept="image/*">
             </div>
-
             <label style="font-size:0.8rem; color:#aaa; margin-left:4px;">Time Control:</label>
             <select id="timeSelect">
                 <option value="1">1 Min (Bullet)</option>
@@ -289,13 +242,11 @@
                 <option value="10" selected>10 Min (Rapid)</option>
                 <option value="30">30 Min (Classical)</option>
             </select>
-
             <div style="display:flex; gap:10px; margin-bottom:10px;">
                 <button class="btn-primary" style="flex:1" onclick="hostGame()">Host Game</button>
                 <button style="flex:1" onclick="joinPrompt()">Join Game</button>
             </div>
             <button class="btn-spec" onclick="spectatePrompt()">Spectate via ID</button>
-            
             <div id="idDisplay" style="display:none; text-align:center; font-size:0.8rem; margin-top:10px; color:#888;">
                 ID: <span id="myPeerId" style="color:var(--accent); cursor:pointer; font-weight:bold;" onclick="copyId()">...</span>
             </div>
@@ -307,64 +258,58 @@
                 <button class="btn-resign" style="flex:1" onclick="resignGame()">Resign</button>
             </div>
         </div>
-        
         <div id="specMsg" style="display:none; text-align:center; font-size:0.8rem; color:var(--spec-yellow); padding:10px;">
             Spectator Mode (Read Only)
         </div>
     </div>
-
 </div>
 
 <script>
-    // --- 1. ASSETS ---
     function pieceTheme (piece) { return 'pieces/' + piece.toLowerCase() + '.png'; }
 
-    // --- 2. STATE ---
     var board = null;
     var game = new Chess();
     var peer = null;
-    
-    // Connections
-    var conn = null; // My opponent connection (if player) or Host connection (if Guest)
-    var player2Conn = null; // For Host: Connection to Player 2
-    var spectators = []; // For Host: List of spectator connections
-    
+    var conn = null; 
+    var player2Conn = null; 
+    var spectators = [];
     var myName = "Player";
     var myAvatar = "https://www.w3schools.com/howto/img_avatar.png"; 
     
-    // Game Data
     var p1Name = "Host", p2Name = "Guest";
     var p1Avatar = "", p2Avatar = "";
-    var p1Side = 'w'; // Host side
+    var p1Side = 'w'; 
     var isSpectator = false;
     var isHost = false;
 
-    // Timer State
     var timeLimit = 10; 
     var timeWhite = 600, timeBlack = 600;
     var timerInterval = null;
     var gameActive = false;
 
-    // --- 3. AVATAR UPLOAD ---
+    // --- CRITICAL FIX: STUN SERVERS ---
+    var peerConfig = {
+        config: { 'iceServers': [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
+        ] }
+    };
+
     $('#avatarInput').change(function(e){
         var file = e.target.files[0];
         if(file){
             var reader = new FileReader();
-            reader.onload = function(evt){
-                myAvatar = evt.target.result; 
-                $('#btmAvatar').attr('src', myAvatar);
-            };
+            reader.onload = function(evt){ myAvatar = evt.target.result; $('#btmAvatar').attr('src', myAvatar); };
             reader.readAsDataURL(file);
         }
     });
 
-    // --- 4. COIN FLIP (Host Only) ---
-    function triggerCoinFlip(callback) {
+    // --- COIN FLIP (Shared Animation) ---
+    function triggerCoinFlipAnimation(result, callback) {
         $('#coinFlipModal').css('display', 'flex');
         $('#coin-container').show();
         $('#coinResult').text("");
         
-        var result = Math.random() > 0.5 ? 'w' : 'b'; 
         var rotations = 1800; 
         var endAngle = (result === 'w') ? rotations : (rotations + 180);
         
@@ -374,52 +319,17 @@
         });
 
         setTimeout(function() {
-            var txt = (result === 'w') ? "YOU PLAY WHITE" : "YOU PLAY BLACK";
+            var txt = (result === 'w') ? "WHITE" : "BLACK";
             $('#coinResult').text(txt).css('color', result === 'w' ? '#fff' : '#aaa');
             setTimeout(function() {
                 $('#coinFlipModal').hide();
                 $('#coin').css({'transform': 'rotateY(0deg)', 'transition': 'none'});
-                callback(result);
+                if(callback) callback();
             }, 1500);
         }, 3000);
     }
 
-    // --- 5. ENGINE ---
-    var stockfish = null;
-    try {
-        stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js');
-        stockfish.onmessage = function(event) {
-            var line = event.data;
-            if(line.includes('score cp') || line.includes('score mate')) updateEvalUI(line);
-        };
-        stockfish.postMessage('uci');
-    } catch(e) {}
-
-    function analyzePosition() {
-        if(!stockfish) return;
-        stockfish.postMessage('position fen ' + game.fen());
-        stockfish.postMessage('go depth 15');
-    }
-
-    function updateEvalUI(line) {
-        let score = 0, text = "";
-        if(line.includes('mate')) {
-            let m = line.split('mate ')[1].split(' ')[0];
-            score = parseInt(m) > 0 ? 1000 : -1000;
-            text = "Mate " + m;
-        } else {
-            let cp = parseInt(line.split('score cp ')[1].split(' ')[0]);
-            if(game.turn() === 'b') cp = -cp; 
-            score = cp;
-            text = (score > 0 ? "+" : "") + (score / 100).toFixed(2);
-        }
-        $('#evalScore').text("Eval: " + text);
-        let clamped = Math.max(-500, Math.min(500, score));
-        let percent = 50 + (clamped / 10); 
-        $('#evalBar').css('height', percent + '%');
-    }
-
-    // --- 6. CONNECTION ---
+    // --- CONNECTION ---
     function hostGame() {
         if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
         myName = $('#usernameInput').val();
@@ -447,7 +357,7 @@
 
     function initPeer(hosting, hostId = null, role = null) {
         if(peer) peer.destroy();
-        peer = new Peer(); 
+        peer = new Peer(peerConfig); // USING STUN SERVERS
 
         peer.on('open', function(id) {
             if (hosting) {
@@ -460,10 +370,7 @@
             }
         });
 
-        // HOST RECEIVES CONNECTIONS
         peer.on('connection', function(c) {
-            // Check metadata to see intent (Player or Spectator)
-            // If connection has no metadata, assume player (legacy support)
             const mode = (c.metadata && c.metadata.mode) ? c.metadata.mode : 'player';
 
             if (mode === 'player') {
@@ -471,25 +378,24 @@
                     player2Conn = c;
                     setupHostPlayerConnection(c);
                 } else {
-                    // Game full, force to reject or error
                     c.on('open', () => {
                         c.send({type: 'error', msg: 'Game Full'});
                         setTimeout(() => c.close(), 500);
                     });
                 }
             } else if (mode === 'spectator') {
-                console.log("New spectator connected");
                 spectators.push(c);
                 setupHostSpectatorConnection(c);
             }
         });
+
+        peer.on('error', function(err) {
+            alert("Connection Error: " + err.type + "\nTry a different network or browser.");
+        });
     }
 
     function connectTo(hostId, role) {
-        // Send metadata so host knows our intent
-        conn = peer.connect(hostId, {
-            metadata: { mode: role }
-        });
+        conn = peer.connect(hostId, { metadata: { mode: role } });
         
         if (role === 'spectator') {
             isSpectator = true;
@@ -503,28 +409,32 @@
         }
     }
 
-    // --- HOST LOGIC (HANDLING P2) ---
+    // --- HOST LOGIC ---
     function setupHostPlayerConnection(c) {
         c.on('open', function() {
-            $('#topStatus').text("Connected! Flipping Coin...");
+            $('#topStatus').text("Connected! Synchronizing...");
             
-            triggerCoinFlip(function(hostSide) {
-                p1Side = hostSide; 
-                p1Name = myName;
-                p1Avatar = myAvatar;
-                
-                // Init Board
-                board.orientation(p1Side === 'w' ? 'white' : 'black');
+            // 1. Host decides side
+            var hostSide = Math.random() > 0.5 ? 'w' : 'b';
+            p1Side = hostSide; 
+            p1Name = myName;
+            p1Avatar = myAvatar;
 
-                // Send Init to P2
-                var p2InitData = { 
+            // 2. Tell Client to prepare for coin flip
+            c.send({ type: 'prepare_flip', side: hostSide });
+            
+            // 3. Trigger Local Animation
+            triggerCoinFlipAnimation(hostSide, function() {
+                // Animation Done.
+                board.orientation(p1Side === 'w' ? 'white' : 'black');
+                
+                // 4. Send Game Init
+                c.send({ 
                     type: 'init', 
                     p1Name: p1Name, p1Avatar: p1Avatar,
                     p1Side: p1Side,
                     timeLimit: timeLimit 
-                };
-                c.send(p2InitData);
-                
+                });
                 startGame();
             });
         });
@@ -533,10 +443,8 @@
         c.on('close', function() { alert("Player 2 disconnected"); player2Conn = null; });
     }
 
-    // --- HOST LOGIC (HANDLING SPECS) ---
     function setupHostSpectatorConnection(c) {
         c.on('open', function() {
-            // Send current state immediately
             c.send({
                 type: 'spectate_init',
                 fen: game.fen(),
@@ -558,7 +466,6 @@
         conn.on('close', function() { alert("Host disconnected"); });
     }
 
-    // --- BROADCAST (Host -> All) ---
     function broadcastData(obj) {
         if(player2Conn && player2Conn.open) player2Conn.send(obj);
         spectators.forEach(s => { if(s.open) s.send(obj); });
@@ -566,14 +473,16 @@
 
     // --- DATA HANDLING ---
     function handleData(data) {
-        if(data.type === 'error') {
-            alert(data.msg);
-            location.reload();
-            return;
+        if(data.type === 'error') { alert(data.msg); location.reload(); return; }
+
+        if (data.type === 'prepare_flip') {
+            // SYNCED ANIMATION: Client triggers animation same time as Host
+            triggerCoinFlipAnimation(data.side, function() {
+                 // Animation done. Waiting for 'init' packet.
+            });
         }
 
-        // --- SPECTATOR INIT ---
-        if(data.type === 'spectate_init') {
+        else if(data.type === 'spectate_init') {
             game.load(data.fen);
             board.position(data.fen);
             p1Name = data.p1Name; p1Avatar = data.p1Avatar;
@@ -581,17 +490,14 @@
             p1Side = data.p1Side;
             timeLimit = data.timeLimit;
             timeWhite = data.timeWhite; timeBlack = data.timeBlack;
-            
             updateSpectatorUI();
-            board.orientation('white'); // Specs see white bottom
+            board.orientation('white'); 
             if(!gameActive) startGameTimer();
         }
 
-        // --- PLAYER INIT ---
         else if(data.type === 'init') {
             p1Name = data.p1Name; p1Avatar = data.p1Avatar; p1Side = data.p1Side;
             timeLimit = data.timeLimit;
-            
             var mySide = (p1Side === 'w') ? 'b' : 'w';
             
             $('#btmName').text(myName);
@@ -600,13 +506,10 @@
             $('#topAvatar').attr('src', p1Avatar).css('opacity', 1);
             
             board.orientation(mySide === 'w' ? 'white' : 'black');
-            
-            // Send info back
             conn.send({ type: 'guest_info', name: myName, avatar: myAvatar });
             startGame();
         }
 
-        // --- HOST RECEIVES GUEST INFO ---
         else if(data.type === 'guest_info') {
             p2Name = data.name; p2Avatar = data.avatar;
             $('#topName').text(p2Name);
@@ -614,18 +517,15 @@
             broadcastData({ type: 'update_roster', p2Name: p2Name, p2Avatar: p2Avatar });
         }
 
-        // --- ROSTER UPDATE ---
         else if(data.type === 'update_roster') {
             p2Name = data.p2Name; p2Avatar = data.p2Avatar;
             if(isSpectator) updateSpectatorUI();
         }
 
-        // --- MOVES ---
         else if(data.type === 'move') {
             game.move(data.move);
             board.position(game.fen());
             updateStatus();
-            // Host forwards to spectators
             if(isHost) spectators.forEach(s => { if(s.open) s.send(data); });
         }
         
@@ -635,50 +535,40 @@
         }
         
         else if(data.type === 'resign') endGame("GAME OVER", "Player Resigned");
-        
         else if(data.type === 'draw_offer') {
-            if(!isSpectator && !isHost) { // Guest receives offer
-                 if(confirm("Opponent offers draw?")) {
-                    conn.send({ type: 'draw_accept' }); // Send to Host
-                    endGame("DRAW", "Agreement");
-                 } else conn.send({ type: 'draw_decline' });
-            } else if (!isSpectator && isHost) { // Host receives offer
-                 // (Logic handled in UI for Host initiating)
-                 // If data comes IN, it means P2 offered
-                 if(confirm("Opponent offers draw?")) {
-                    broadcastData({ type: 'draw_accept' });
-                    endGame("DRAW", "Agreement");
-                 } else broadcastData({ type: 'draw_decline' });
-            }
+             if(confirm("Opponent offers draw?")) {
+                if(isHost) { broadcastData({ type: 'draw_accept' }); endGame("DRAW", "Agreement"); }
+                else { conn.send({ type: 'draw_accept' }); endGame("DRAW", "Agreement"); }
+             } else {
+                if(isHost) broadcastData({ type: 'draw_decline' });
+                else conn.send({ type: 'draw_decline' });
+             }
         }
         else if(data.type === 'draw_accept') endGame("DRAW", "Agreement");
         else if(data.type === 'draw_decline') alert("Draw Declined");
     }
 
-    // --- UI HELPERS ---
-    function updateUI() {
-        $('#btmName').text(myName);
-        $('#btmAvatar').attr('src', myAvatar);
-    }
+    // --- UI & GAME ---
+    function updateUI() { $('#btmName').text(myName); $('#btmAvatar').attr('src', myAvatar); }
     
     function updateSpectatorUI() {
-        // Spec sees P1 (Host) vs P2
-        // We put White at bottom usually
         var whiteName = (p1Side === 'w') ? p1Name : p2Name;
         var whiteAv = (p1Side === 'w') ? p1Avatar : p2Avatar;
         var blackName = (p1Side === 'w') ? p2Name : p1Name;
         var blackAv = (p1Side === 'w') ? p2Avatar : p1Avatar;
-        
         $('#btmName').text(whiteName); $('#btmAvatar').attr('src', whiteAv);
         $('#topName').text(blackName); $('#topAvatar').attr('src', blackAv);
     }
 
-    // --- GAME ---
     function startGame() {
         timeWhite = timeLimit * 60; timeBlack = timeLimit * 60;
         startGameTimer();
         $('#connectPanel').hide();
         if(!isSpectator) $('#gameControls').show();
+        
+        // CLEAR STATUS
+        $('#topStatus').text("Online").css('color', 'var(--win-green)');
+        
         updateTimersDisplay();
         setTimeout(board.resize, 200);
         analyzePosition();
@@ -692,13 +582,12 @@
 
     function timerLoop() {
         if(!gameActive) return;
-        
         if(isHost) {
              if(game.turn() === 'w') timeWhite--; else timeBlack--;
              if(timeWhite % 5 === 0) broadcastData({ type: 'time_sync', w: timeWhite, b: timeBlack });
              if(timeWhite <= 0 || timeBlack <= 0) {
                  var msg = (timeWhite <= 0) ? "BLACK WINS" : "WHITE WINS";
-                 broadcastData({ type: 'resign' }); // Reuse resign packet to stop game
+                 broadcastData({ type: 'resign' }); 
                  endGame(msg, "Time Out");
              }
         } else {
@@ -709,15 +598,11 @@
 
     function updateTimersDisplay() {
         const fmt = (t) => { let m=Math.floor(t/60), s=t%60; return `${m}:${s<10?'0':''}${s}`; };
-        
-        // If board is white, bottom is white time
         var orientation = board.orientation(); 
         var btmTime = (orientation === 'white') ? timeWhite : timeBlack;
         var topTime = (orientation === 'white') ? timeBlack : timeWhite;
-        
         $('#timer-btm').text(fmt(btmTime));
         $('#timer-top').text(fmt(topTime));
-        
         var isWhiteTurn = (game.turn() === 'w');
         $('#timer-btm').toggleClass('active', (orientation === 'white' && isWhiteTurn) || (orientation === 'black' && !isWhiteTurn));
         $('#timer-top').toggleClass('active', (orientation === 'white' && !isWhiteTurn) || (orientation === 'black' && isWhiteTurn));
@@ -725,7 +610,6 @@
 
     function onDragStart(source, piece) {
         if (!gameActive || isSpectator || game.game_over()) return false;
-        
         var amIWhite = (isHost && p1Side === 'w') || (!isHost && p1Side === 'b');
         if(amIWhite && piece.search(/^b/) !== -1) return false;
         if(!amIWhite && piece.search(/^w/) !== -1) return false;
@@ -736,10 +620,8 @@
         var moveObj = { from: source, to: target, promotion: 'q' };
         var move = game.move(moveObj);
         if (move === null) return 'snapback';
-        
         if(isHost) broadcastData({ type: 'move', move: moveObj });
         else conn.send({ type: 'move', move: moveObj });
-        
         updateStatus();
     }
 
@@ -752,7 +634,6 @@
         $('#pgnLog').html(html).scrollTop(9999);
         updateTimersDisplay();
         analyzePosition();
-
         if (game.in_checkmate()) endGame("CHECKMATE", "Game Over");
         else if (game.in_draw()) endGame("DRAW", "Stalemate");
     }
@@ -764,35 +645,36 @@
         $('#winSubtext').text(sub);
         $('#gameOverModal').css('display', 'flex');
     }
+    function resignGame() { if(confirm("Resign?")) { if(isHost) broadcastData({ type: 'resign' }); else conn.send({ type: 'resign' }); endGame("YOU LOSE", "Resigned"); } }
+    function offerDraw() { if(confirm("Offer Draw?")) { if(isHost) broadcastData({ type: 'draw_offer' }); else conn.send({ type: 'draw_offer' }); } }
+    function copyId() { var txt = $('#myPeerId').text(); navigator.clipboard.writeText(txt); alert("ID Copied: " + txt); }
 
-    function resignGame() {
-        if(confirm("Resign?")) {
-            if(isHost) broadcastData({ type: 'resign' });
-            else conn.send({ type: 'resign' });
-            endGame("YOU LOSE", "Resigned");
+    // --- ENGINE ---
+    var stockfish = null;
+    try {
+        stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js');
+        stockfish.onmessage = function(event) {
+            var line = event.data;
+            if(line.includes('score cp') || line.includes('score mate')) updateEvalUI(line);
+        };
+        stockfish.postMessage('uci');
+    } catch(e) {}
+    function analyzePosition() { if(stockfish) { stockfish.postMessage('position fen ' + game.fen()); stockfish.postMessage('go depth 15'); } }
+    function updateEvalUI(line) {
+        let score = 0;
+        if(line.includes('mate')) {
+            let m = line.split('mate ')[1].split(' ')[0]; score = parseInt(m) > 0 ? 1000 : -1000;
+        } else {
+            let cp = parseInt(line.split('score cp ')[1].split(' ')[0]);
+            if(game.turn() === 'b') cp = -cp; score = cp;
         }
-    }
-    function offerDraw() {
-        if(confirm("Offer Draw?")) {
-            if(isHost) broadcastData({ type: 'draw_offer' });
-            else conn.send({ type: 'draw_offer' });
-        }
-    }
-    function copyId() {
-        var txt = $('#myPeerId').text();
-        navigator.clipboard.writeText(txt);
-        alert("ID Copied: " + txt); 
+        let clamped = Math.max(-500, Math.min(500, score));
+        $('#evalBar').css('height', (50 + (clamped / 10)) + '%');
     }
 
     $(document).ready(function() {
-        board = Chessboard('myBoard', {
-            draggable: true, position: 'start',
-            onDragStart: onDragStart, onDrop: onDrop,
-            onSnapEnd: () => board.position(game.fen()),
-            pieceTheme: pieceTheme
-        });
+        board = Chessboard('myBoard', { draggable: true, position: 'start', onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: () => board.position(game.fen()), pieceTheme: pieceTheme });
     });
-
 </script>
 </body>
 </html>
