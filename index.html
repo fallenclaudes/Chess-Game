@@ -43,67 +43,43 @@
         /* --- HOME BUTTON --- */
         .home-btn {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 20px; left: 20px;
             background: rgba(255,255,255,0.1);
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
+            padding: 10px 15px; border-radius: 8px;
+            cursor: pointer; font-weight: bold;
             border: 1px solid rgba(255,255,255,0.1);
-            transition: 0.2s;
-            z-index: 100;
+            transition: 0.2s; z-index: 100;
         }
         .home-btn:hover { background: rgba(255,255,255,0.2); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
 
         /* --- LAYOUT --- */
         .layout {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            backdrop-filter: blur(10px);
-            padding: 20px;
+            display: flex; gap: 20px; align-items: center;
+            backdrop-filter: blur(10px); padding: 20px;
         }
 
-        /* --- EVAL BAR (ANALYSIS) --- */
+        /* --- EVAL BAR --- */
         .eval-wrapper {
-            width: 25px;
-            height: 560px;
-            background: #333;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
+            width: 25px; height: 560px; background: #111;
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
+            position: relative; overflow: hidden;
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
         .eval-fill {
-            width: 100%;
-            height: 50%;
-            background: linear-gradient(to top, #ffffff, #a0a0a0); /* White advantage color */
-            position: absolute;
-            bottom: 0;
-            transition: height 1s ease;
+            width: 100%; height: 50%;
+            background: linear-gradient(to top, #ffffff, #a0a0a0);
+            position: absolute; bottom: 0; transition: height 1s ease;
             box-shadow: 0 0 10px white;
         }
-        /* Black side of bar background */
-        .eval-wrapper { background: #111; } 
 
-        /* --- BOARD CONTAINER (2D FLAT) --- */
+        /* --- BOARD --- */
         .board-wrapper {
-            width: 560px;
-            height: 560px;
-            position: relative;
+            width: 560px; height: 560px; position: relative;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            border: 5px solid #333;
-            border-radius: 4px;
+            border: 5px solid #333; border-radius: 4px;
         }
+        #myBoard { width: 100%; height: 100%; }
 
-        #myBoard {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Board Marble Texture */
         .white-1e1d7 {
             background-color: var(--board-white);
             background-image: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
@@ -116,67 +92,65 @@
 
         /* --- SIDEBAR --- */
         .sidebar {
-            width: 300px;
-            height: 560px;
+            width: 320px; height: 560px;
             background: var(--panel-glass);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
+            border-radius: 12px; display: flex; flex-direction: column;
             backdrop-filter: blur(15px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         .player-card {
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 15px; display: flex; align-items: center; gap: 15px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
+        /* AVATAR STYLES */
+        .avatar {
+            width: 50px; height: 50px; border-radius: 50%;
+            border: 2px solid var(--accent);
+            object-fit: cover; background: #000;
+        }
+        
+        .player-info { flex-grow: 1; }
         .player-name {
-            font-weight: 800; 
-            color: #fff;      
+            font-weight: 800; color: #fff;      
             text-shadow: 0 0 8px rgba(255,255,255,0.4); 
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 1.0rem;
-            display: block;
+            text-transform: uppercase; letter-spacing: 1px; font-size: 1.0rem;
         }
         .player-status { font-size: 0.75rem; color: var(--accent); margin-top: 4px; }
 
         .timer {
-            font-family: 'Courier New', monospace;
-            font-size: 1.4rem;
-            padding: 5px 10px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #888;
+            font-family: 'Courier New', monospace; font-size: 1.4rem;
+            padding: 5px 10px; background: rgba(0,0,0,0.4);
+            border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); color: #888;
         }
         .timer.active {
-            color: var(--accent);
-            border-color: var(--accent);
+            color: #fff; border-color: var(--accent);
             box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
-            color: #fff;
         }
 
         .log-area { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.9rem; background: rgba(0,0,0,0.2); }
         .move-row { display: flex; padding: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
         .controls {
-            padding: 20px;
-            display: flex; flex-direction: column; gap: 10px;
+            padding: 20px; display: flex; flex-direction: column; gap: 10px;
             border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* INPUTS & BUTTONS */
         input, select {
             background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2);
             color: #fff; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box;
             text-align: center; margin-bottom: 5px; outline: none;
         }
+        
+        /* FILE INPUT */
+        .file-upload {
+            display: flex; gap: 10px; align-items: center; margin-bottom: 10px;
+            background: rgba(255,255,255,0.05); padding: 5px; border-radius: 6px;
+        }
+        input[type="file"] { font-size: 0.8rem; padding: 5px; }
+
         button {
             padding: 12px; border: none; border-radius: 6px; font-weight: 700;
             cursor: pointer; text-transform: uppercase; font-size: 0.8rem;
@@ -187,12 +161,9 @@
         .btn-primary:hover { background: #7dd3fc; box-shadow: 0 0 15px var(--accent-glow); }
         
         .btn-draw { border: 1px solid #fbbf24; color: #fbbf24; background: transparent; }
-        .btn-draw:hover { background: rgba(251, 191, 36, 0.1); }
-        
         .btn-resign { border: 1px solid var(--loss-red); color: var(--loss-red); background: transparent; }
-        .btn-resign:hover { background: rgba(248, 113, 113, 0.1); }
 
-        /* MODAL */
+        /* MODALS */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: none; z-index: 999;
@@ -204,31 +175,52 @@
             box-shadow: 0 0 40px var(--accent-glow);
             max-width: 400px; width: 90%;
         }
-        
-        /* Analysis Text */
-        #evalScore {
-            font-size: 10px; text-align: center; margin-top: 5px; opacity: 0.7; font-family: monospace;
-        }
 
-        @media(max-width: 900px) {
-            .layout { flex-direction: column; }
-            .board-wrapper { width: 95vw; height: 95vw; }
-            .sidebar { width: 95vw; height: auto; }
-            .eval-wrapper { display: none; /* Hide analysis bar on mobile to save space */ }
+        /* --- COIN FLIP ANIMATION --- */
+        #coin-container {
+            width: 150px; height: 150px; margin: 0 auto;
+            perspective: 800px; display: none; /* Hidden by default */
         }
+        #coin {
+            width: 100%; height: 100%; position: relative;
+            transform-style: preserve-3d;
+            transition: transform 3s ease-out;
+        }
+        .coin-face {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 50%; backface-visibility: hidden;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: bold; border: 4px solid #999;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        .coin-white { background: #e2e2e2; color: #000; transform: rotateY(0deg); }
+        .coin-black { background: #333; color: #fff; transform: rotateY(180deg); }
+
+        #evalScore { font-size: 10px; text-align: center; margin-top: 5px; opacity: 0.7; font-family: monospace; }
     </style>
 </head>
 <body>
 
-<div class="home-btn" onclick="location.reload()">
-    ⌂ Home
-</div>
+<div class="home-btn" onclick="location.reload()">⌂ Home</div>
 
 <div class="modal-overlay" id="gameOverModal">
     <div class="modal-box">
         <h1 id="winnerText" style="margin:0; font-size:2rem; color:var(--accent);">GAME OVER</h1>
         <p id="winSubtext" style="color:var(--text-glow); margin-top:5px;">Checkmate</p>
         <button class="btn-primary" style="margin-top:20px" onclick="location.reload()">Return Home</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="coinFlipModal" style="z-index: 1001;">
+    <div class="modal-box">
+        <h2 style="color:var(--accent)">Deciding Sides...</h2>
+        <div id="coin-container">
+            <div id="coin">
+                <div class="coin-face coin-white">WHITE</div>
+                <div class="coin-face coin-black">BLACK</div>
+            </div>
+        </div>
+        <div id="coinResult" style="margin-top:20px; font-weight:bold; height:20px;"></div>
     </div>
 </div>
 
@@ -243,9 +235,9 @@
     </div>
 
     <div class="sidebar">
-        
         <div class="player-card">
-            <div>
+            <img id="oppAvatar" class="avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="opacity:0.5">
+            <div class="player-info">
                 <span class="player-name" id="oppName">Opponent</span>
                 <div class="player-status" id="oppStatus">Offline</div>
             </div>
@@ -257,7 +249,8 @@
         </div>
 
         <div class="player-card">
-            <div>
+            <img id="myAvatarDisplay" class="avatar" src="https://www.w3schools.com/howto/img_avatar.png">
+            <div class="player-info">
                 <span class="player-name" id="myNameDisplay">You</span>
                 <div class="player-status" style="color:var(--win-green)">Online</div>
                 <div id="evalScore">Eval: 0.0</div>
@@ -268,6 +261,11 @@
         <div class="controls" id="connectPanel">
             <input type="text" id="usernameInput" placeholder="Enter Your Name">
             
+            <div class="file-upload">
+                <span style="font-size:0.8rem; color:#aaa;">Avatar:</span>
+                <input type="file" id="avatarInput" accept="image/*">
+            </div>
+
             <label style="font-size:0.8rem; color:#aaa; margin-left:4px;">Time Control:</label>
             <select id="timeSelect">
                 <option value="1">1 Min (Bullet)</option>
@@ -298,12 +296,10 @@
 </div>
 
 <script>
-    // --- 1. ASSETS (LOCAL FOLDER) ---
-    function pieceTheme (piece) {
-        return 'pieces/' + piece.toLowerCase() + '.png';
-    }
+    // --- 1. ASSETS ---
+    function pieceTheme (piece) { return 'pieces/' + piece.toLowerCase() + '.png'; }
 
-    // --- 2. GAME STATE ---
+    // --- 2. STATE ---
     var board = null;
     var game = new Chess();
     var peer = null;
@@ -312,6 +308,8 @@
     
     var myName = "Player";
     var oppName = "Opponent";
+    var myAvatar = "https://www.w3schools.com/howto/img_avatar.png"; // Default
+    var oppAvatar = "";
     var mySide = 'w';
 
     // Timer State
@@ -321,20 +319,62 @@
     var timerInterval = null;
     var gameActive = false;
 
-    // --- 3. ENGINE (STOCKFISH) SETUP ---
-    // Loading Stockfish from CDN for "Advanced Analysis"
+    // --- 3. AVATAR HANDLING ---
+    // Listen for file upload
+    $('#avatarInput').change(function(e){
+        var file = e.target.files[0];
+        if(file){
+            var reader = new FileReader();
+            reader.onload = function(evt){
+                myAvatar = evt.target.result; // Convert to Base64
+                $('#myAvatarDisplay').attr('src', myAvatar);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // --- 4. COIN FLIP LOGIC ---
+    function triggerCoinFlip(callback) {
+        $('#coinFlipModal').css('display', 'flex');
+        $('#coin-container').show();
+        $('#coinResult').text("");
+        
+        // Randomize: 0 = White, 1 = Black
+        // To animate, we spin a lot (e.g., 5 full rotations + outcome)
+        // White (0deg) | Black (180deg)
+        var result = Math.random() > 0.5 ? 'w' : 'b'; 
+        var rotations = 1800; // 5 full spins (360 * 5)
+        var endAngle = (result === 'w') ? rotations : (rotations + 180);
+        
+        // Apply Transform
+        $('#coin').css({
+            'transform': 'rotateY(' + endAngle + 'deg)',
+            'transition': 'transform 3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+        });
+
+        // Wait for animation
+        setTimeout(function() {
+            var txt = (result === 'w') ? "YOU PLAY WHITE" : "YOU PLAY BLACK";
+            $('#coinResult').text(txt).css('color', result === 'w' ? '#fff' : '#aaa');
+            
+            setTimeout(function() {
+                $('#coinFlipModal').hide();
+                // Reset coin for next time
+                $('#coin').css({'transform': 'rotateY(0deg)', 'transition': 'none'});
+                callback(result);
+            }, 1500);
+        }, 3000);
+    }
+
+    // --- 5. ENGINE ---
     try {
         stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.0/stockfish.js');
         stockfish.onmessage = function(event) {
             var line = event.data;
-            if(line.includes('score cp') || line.includes('score mate')) {
-                updateEvalUI(line);
-            }
+            if(line.includes('score cp') || line.includes('score mate')) updateEvalUI(line);
         };
         stockfish.postMessage('uci');
-    } catch(e) {
-        console.log("Stockfish failed to load (Cross-Origin isolation might be required)");
-    }
+    } catch(e) { console.log("Stockfish failed."); }
 
     function analyzePosition() {
         if(!stockfish) return;
@@ -343,35 +383,26 @@
     }
 
     function updateEvalUI(line) {
-        let score = 0;
-        let text = "";
-        
-        // Parse CP (Centipawn) or Mate
+        let score = 0, text = "";
         if(line.includes('mate')) {
             let m = line.split('mate ')[1].split(' ')[0];
             score = parseInt(m) > 0 ? 1000 : -1000;
             text = "Mate in " + Math.abs(m);
         } else {
             let cp = parseInt(line.split('score cp ')[1].split(' ')[0]);
-            // Stockfish gives score relative to side to move. We normalize to White's perspective.
             if(game.turn() === 'b') cp = -cp; 
             score = cp;
             text = (score > 0 ? "+" : "") + (score / 100).toFixed(2);
         }
-
-        // Update Text
         $('#evalScore').text("Eval: " + text);
-
-        // Update Bar (50% is 0.0)
-        // Clamp score between -500 and +500 for visual bar
         let clamped = Math.max(-500, Math.min(500, score));
-        let percent = 50 + (clamped / 10); // 500cp = +50%, -500cp = -50%
+        let percent = 50 + (clamped / 10); 
         $('#evalBar').css('height', percent + '%');
     }
 
-    // --- 4. CONNECTION LOGIC ---
+    // --- 6. CONNECTION ---
     function hostGame() {
-        if(!$('#usernameInput').val()) { alert("Please enter a name first."); return; }
+        if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
         myName = $('#usernameInput').val();
         updateNames();
         timeLimit = parseInt($('#timeSelect').val());
@@ -379,7 +410,7 @@
     }
 
     function joinPrompt() {
-        if(!$('#usernameInput').val()) { alert("Please enter a name first."); return; }
+        if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
         myName = $('#usernameInput').val();
         updateNames();
         const hostId = prompt("Enter Friend's Game ID:");
@@ -394,8 +425,8 @@
             if (isHost) {
                 $('#myPeerId').text(id);
                 $('#idDisplay').show();
-                $('#oppStatus').text("Waiting...");
-                navigator.clipboard.writeText(id).then(() => alert("ID Copied! Send it to your friend."));
+                $('#oppStatus').text("Waiting for connection...");
+                navigator.clipboard.writeText(id).then(() => alert("ID Copied!"));
             } else {
                 connectTo(hostId);
             }
@@ -415,22 +446,30 @@
     function setupConnection(isHost) {
         conn.on('open', function() {
             if(isHost) {
-                var randomSide = Math.random() > 0.5 ? 'w' : 'b';
-                mySide = randomSide;
-                var guestSide = (mySide === 'w') ? 'b' : 'w';
+                $('#oppStatus').text("Connected! Flipping Coin...");
                 
-                board.orientation(mySide === 'w' ? 'white' : 'black');
-                
-                sendData({ 
-                    type: 'init', 
-                    name: myName, 
-                    side: guestSide,
-                    timeLimit: timeLimit 
+                // HOST TRIGGERS ANIMATION
+                triggerCoinFlip(function(hostSide) {
+                    mySide = hostSide;
+                    var guestSide = (mySide === 'w') ? 'b' : 'w';
+                    
+                    board.orientation(mySide === 'w' ? 'white' : 'black');
+                    
+                    // Send Config + Avatar
+                    sendData({ 
+                        type: 'init', 
+                        name: myName,
+                        avatar: myAvatar, // Send my avatar
+                        side: guestSide,
+                        timeLimit: timeLimit 
+                    });
+                    
+                    startGame();
                 });
-                
-                startGame();
+
+            } else {
+                $('#oppStatus').text("Connected! Waiting for Host...").css('color', '#4ade80');
             }
-            $('#oppStatus').text("Connected").css('color', '#4ade80');
         });
 
         conn.on('data', function(data) { handleData(data); });
@@ -445,13 +484,24 @@
             mySide = data.side;
             timeLimit = data.timeLimit;
             
+            // Handle Opponent Avatar
+            if(data.avatar) {
+                oppAvatar = data.avatar;
+                $('#oppAvatar').attr('src', oppAvatar).css('opacity', 1);
+            }
+
             updateNames();
             board.orientation(mySide === 'w' ? 'white' : 'black');
-            sendData({ type: 'name', name: myName });
+            
+            // Send back my Name and Avatar
+            sendData({ type: 'name', name: myName, avatar: myAvatar });
             startGame();
         }
         else if(data.type === 'name') {
             oppName = data.name;
+            if(data.avatar) {
+                $('#oppAvatar').attr('src', data.avatar).css('opacity', 1);
+            }
             updateNames();
         }
         else if(data.type === 'move') {
@@ -463,22 +513,18 @@
             endGame("YOU WIN!", oppName + " resigned.");
         }
         else if(data.type === 'draw_offer') {
-            if(confirm(oppName + " offers a draw. Do you accept?")) {
+            if(confirm(oppName + " offers a draw?")) {
                 sendData({ type: 'draw_accept' });
                 endGame("DRAW", "Agreement");
             } else {
                 sendData({ type: 'draw_decline' });
             }
         }
-        else if(data.type === 'draw_accept') {
-            endGame("DRAW", "Agreement");
-        }
-        else if(data.type === 'draw_decline') {
-            alert("Draw offer declined.");
-        }
+        else if(data.type === 'draw_accept') endGame("DRAW", "Agreement");
+        else if(data.type === 'draw_decline') alert("Draw declined.");
     }
 
-    // --- 5. GAME & TIMER LOGIC ---
+    // --- 7. GAME LOGIC ---
     function startGame() {
         timeWhite = timeLimit * 60;
         timeBlack = timeLimit * 60;
@@ -493,18 +539,17 @@
         timerInterval = setInterval(timerLoop, 1000);
         
         setTimeout(board.resize, 200);
-        analyzePosition(); // Initial analysis
+        analyzePosition();
     }
 
     function timerLoop() {
         if(!gameActive) return;
-        
         if(game.turn() === 'w') {
             timeWhite--;
-            if(timeWhite <= 0) endGame("BLACK WINS", "White ran out of time");
+            if(timeWhite <= 0) endGame("BLACK WINS", "Time");
         } else {
             timeBlack--;
-            if(timeBlack <= 0) endGame("WHITE WINS", "Black ran out of time");
+            if(timeBlack <= 0) endGame("WHITE WINS", "Time");
         }
         updateTimersDisplay();
     }
@@ -515,17 +560,12 @@
             let s = t % 60;
             return `${m}:${s<10?'0':''}${s}`;
         };
-
         let myTime, oppTime, myTurn;
-
         if(mySide === 'w') {
-            myTime = timeWhite; oppTime = timeBlack;
-            myTurn = (game.turn() === 'w');
+            myTime = timeWhite; oppTime = timeBlack; myTurn = (game.turn() === 'w');
         } else {
-            myTime = timeBlack; oppTime = timeWhite;
-            myTurn = (game.turn() === 'b');
+            myTime = timeBlack; oppTime = timeWhite; myTurn = (game.turn() === 'b');
         }
-
         $('#timer-btm').text(fmt(myTime)).toggleClass('active', myTurn);
         $('#timer-top').text(fmt(oppTime)).toggleClass('active', !myTurn);
     }
@@ -540,13 +580,11 @@
         var moveObj = { from: source, to: target, promotion: 'q' };
         var move = game.move(moveObj);
         if (move === null) return 'snapback';
-
         sendData({ type: 'move', move: moveObj });
         updateStatus();
     }
 
     function updateStatus() {
-        // PGN Update
         var history = game.history();
         var html = '';
         for (var i = 0; i < history.length; i += 2) {
@@ -554,8 +592,6 @@
         }
         $('#pgnLog').html(html).scrollTop(9999);
         updateTimersDisplay();
-        
-        // Trigger Engine Analysis
         analyzePosition();
 
         if (game.in_checkmate()) {
@@ -563,9 +599,7 @@
             let msg = (winner === 'WHITE' && mySide === 'w') || (winner === 'BLACK' && mySide === 'b') ? "YOU WIN!" : "YOU LOSE";
             endGame(msg, "Checkmate");
         } 
-        else if (game.in_draw()) {
-            endGame("DRAW", "Stalemate / Repetition");
-        }
+        else if (game.in_draw()) endGame("DRAW", "Stalemate");
     }
 
     function endGame(title, sub) {
@@ -576,44 +610,32 @@
         $('#gameOverModal').css('display', 'flex');
     }
 
-    // --- 6. ACTION BUTTONS ---
     function resignGame() {
-        if(confirm("Resign game?")) {
+        if(confirm("Resign?")) {
             sendData({ type: 'resign' });
-            endGame("YOU LOSE", "You resigned");
+            endGame("YOU LOSE", "Resigned");
         }
     }
-
     function offerDraw() {
-        if(confirm("Offer a draw to " + oppName + "?")) {
+        if(confirm("Offer Draw?")) {
             sendData({ type: 'draw_offer' });
-            // Visual feedback
-            const btn = $('.btn-draw');
-            const orig = btn.text();
-            btn.text("Sent...");
-            setTimeout(() => btn.text(orig), 2000);
         }
     }
 
-    // --- 7. UTILS ---
     function updateNames() {
         $('#myNameDisplay').text(myName);
         $('#oppName').text(oppName);
     }
-
     function copyId() {
         var txt = $('#myPeerId').text();
         navigator.clipboard.writeText(txt);
         alert("ID Copied: " + txt); 
     }
 
-    // --- INIT ---
     $(document).ready(function() {
         board = Chessboard('myBoard', {
-            draggable: true,
-            position: 'start',
-            onDragStart: onDragStart,
-            onDrop: onDrop,
+            draggable: true, position: 'start',
+            onDragStart: onDragStart, onDrop: onDrop,
             onSnapEnd: () => board.position(game.fen()),
             pieceTheme: pieceTheme
         });
