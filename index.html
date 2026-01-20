@@ -16,7 +16,7 @@
         :root {
             --bg-gradient-start: #0f172a;
             --bg-gradient-end: #1e293b;
-            --panel-glass: rgba(30, 41, 59, 0.85);
+            --panel-glass: rgba(30, 41, 59, 0.9);
             --text-glow: #e2e8f0;
             --accent: #38bdf8;
             --accent-glow: rgba(56, 189, 248, 0.4);
@@ -171,6 +171,9 @@
         .btn-primary { background: var(--accent); color: #0f172a; }
         .btn-primary:hover { background: #7dd3fc; box-shadow: 0 0 15px var(--accent-glow); }
         
+        .btn-spec { border: 1px solid var(--spec-yellow); color: var(--spec-yellow); background: transparent; }
+        .btn-spec:hover { background: rgba(250, 204, 21, 0.1); }
+        
         .btn-draw { border: 1px solid #fbbf24; color: #fbbf24; background: transparent; }
         .btn-resign { border: 1px solid var(--loss-red); color: var(--loss-red); background: transparent; }
 
@@ -287,10 +290,11 @@
                 <option value="30">30 Min (Classical)</option>
             </select>
 
-            <div style="display:flex; gap:10px;">
-                <button class="btn-primary" onclick="hostGame()">Host</button>
-                <button onclick="joinPrompt()">Join</button>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button class="btn-primary" style="flex:1" onclick="hostGame()">Host Game</button>
+                <button style="flex:1" onclick="joinPrompt()">Join Game</button>
             </div>
+            <button class="btn-spec" onclick="spectatePrompt()">Spectate via ID</button>
             
             <div id="idDisplay" style="display:none; text-align:center; font-size:0.8rem; margin-top:10px; color:#888;">
                 ID: <span id="myPeerId" style="color:var(--accent); cursor:pointer; font-weight:bold;" onclick="copyId()">...</span>
@@ -305,7 +309,7 @@
         </div>
         
         <div id="specMsg" style="display:none; text-align:center; font-size:0.8rem; color:var(--spec-yellow); padding:10px;">
-            Spectator Mode Enabled (Read Only)
+            Spectator Mode (Read Only)
         </div>
     </div>
 
@@ -319,8 +323,11 @@
     var board = null;
     var game = new Chess();
     var peer = null;
-    var conn = null; // Main connection (for player)
-    var spectators = []; // Array for host to manage spectators
+    
+    // Connections
+    var conn = null; // My opponent connection (if player) or Host connection (if Guest)
+    var player2Conn = null; // For Host: Connection to Player 2
+    var spectators = []; // For Host: List of spectator connections
     
     var myName = "Player";
     var myAvatar = "https://www.w3schools.com/howto/img_avatar.png"; 
@@ -330,6 +337,7 @@
     var p1Avatar = "", p2Avatar = "";
     var p1Side = 'w'; // Host side
     var isSpectator = false;
+    var isHost = false;
 
     // Timer State
     var timeLimit = 10; 
@@ -411,10 +419,11 @@
         $('#evalBar').css('height', percent + '%');
     }
 
-    // --- 6. CONNECTION & BROADCASTING ---
+    // --- 6. CONNECTION ---
     function hostGame() {
         if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
         myName = $('#usernameInput').val();
+        isHost = true;
         updateUI();
         timeLimit = parseInt($('#timeSelect').val());
         initPeer(true);
@@ -425,79 +434,110 @@
         myName = $('#usernameInput').val();
         updateUI();
         const hostId = prompt("Enter Game ID:");
-        if(hostId) initPeer(false, hostId);
+        if(hostId) initPeer(false, hostId, 'player');
     }
 
-    function initPeer(isHost, hostId = null) {
+    function spectatePrompt() {
+        if(!$('#usernameInput').val()) { alert("Enter Name"); return; }
+        myName = $('#usernameInput').val();
+        updateUI();
+        const hostId = prompt("Enter Game ID to Watch:");
+        if(hostId) initPeer(false, hostId, 'spectator');
+    }
+
+    function initPeer(hosting, hostId = null, role = null) {
         if(peer) peer.destroy();
         peer = new Peer(); 
 
         peer.on('open', function(id) {
-            if (isHost) {
+            if (hosting) {
                 $('#myPeerId').text(id);
                 $('#idDisplay').show();
                 $('#topStatus').text("Waiting for players...");
                 navigator.clipboard.writeText(id).then(() => alert("ID Copied!"));
             } else {
-                connectTo(hostId);
+                connectTo(hostId, role);
             }
         });
 
         // HOST RECEIVES CONNECTIONS
         peer.on('connection', function(c) {
-            // First connection is Player 2
-            if(conn === null) {
-                conn = c;
-                setupHostConnection();
-            } else {
-                // Subsequent connections are Spectators
+            // Check metadata to see intent (Player or Spectator)
+            // If connection has no metadata, assume player (legacy support)
+            const mode = (c.metadata && c.metadata.mode) ? c.metadata.mode : 'player';
+
+            if (mode === 'player') {
+                if(player2Conn === null) {
+                    player2Conn = c;
+                    setupHostPlayerConnection(c);
+                } else {
+                    // Game full, force to reject or error
+                    c.on('open', () => {
+                        c.send({type: 'error', msg: 'Game Full'});
+                        setTimeout(() => c.close(), 500);
+                    });
+                }
+            } else if (mode === 'spectator') {
                 console.log("New spectator connected");
                 spectators.push(c);
-                setupSpectatorConnection(c);
+                setupHostSpectatorConnection(c);
             }
         });
     }
 
-    function connectTo(hostId) {
-        conn = peer.connect(hostId);
-        setupClientConnection();
+    function connectTo(hostId, role) {
+        // Send metadata so host knows our intent
+        conn = peer.connect(hostId, {
+            metadata: { mode: role }
+        });
+        
+        if (role === 'spectator') {
+            isSpectator = true;
+            $('#specBadge').show();
+            $('#gameControls').hide();
+            $('#specMsg').show();
+            $('#connectPanel').hide();
+            setupClientConnection();
+        } else {
+            setupClientConnection();
+        }
     }
 
-    // --- HOST LOGIC ---
-    function setupHostConnection() {
-        conn.on('open', function() {
+    // --- HOST LOGIC (HANDLING P2) ---
+    function setupHostPlayerConnection(c) {
+        c.on('open', function() {
             $('#topStatus').text("Connected! Flipping Coin...");
             
             triggerCoinFlip(function(hostSide) {
-                p1Side = hostSide; // Host Side
+                p1Side = hostSide; 
                 p1Name = myName;
                 p1Avatar = myAvatar;
                 
-                // Init Guest
-                var guestSide = (p1Side === 'w') ? 'b' : 'w';
+                // Init Board
                 board.orientation(p1Side === 'w' ? 'white' : 'black');
 
-                // Send Init to Guest
-                broadcastData({ 
+                // Send Init to P2
+                var p2InitData = { 
                     type: 'init', 
                     p1Name: p1Name, p1Avatar: p1Avatar,
                     p1Side: p1Side,
                     timeLimit: timeLimit 
-                });
+                };
+                c.send(p2InitData);
                 
                 startGame();
             });
         });
         
-        conn.on('data', function(data) { handleData(data); });
-        conn.on('close', function() { alert("Player disconnected"); });
+        c.on('data', function(data) { handleData(data); });
+        c.on('close', function() { alert("Player 2 disconnected"); player2Conn = null; });
     }
 
-    // Handles a new Spectator
-    function setupSpectatorConnection(specConn) {
-        specConn.on('open', function() {
-            // Send current game state immediately
-            specConn.send({
+    // --- HOST LOGIC (HANDLING SPECS) ---
+    function setupHostSpectatorConnection(c) {
+        c.on('open', function() {
+            // Send current state immediately
+            c.send({
                 type: 'spectate_init',
                 fen: game.fen(),
                 p1Name: p1Name, p1Avatar: p1Avatar,
@@ -509,15 +549,7 @@
         });
     }
 
-    // Send to Opponent AND all Spectators
-    function broadcastData(obj) {
-        // Send to Player 2
-        if(conn && conn.open) conn.send(obj);
-        // Send to Spectators
-        spectators.forEach(s => { if(s.open) s.send(obj); });
-    }
-
-    // --- CLIENT (GUEST) LOGIC ---
+    // --- CLIENT LOGIC ---
     function setupClientConnection() {
         conn.on('open', function() {
             $('#topStatus').text("Connected! Waiting for Host...");
@@ -526,81 +558,65 @@
         conn.on('close', function() { alert("Host disconnected"); });
     }
 
+    // --- BROADCAST (Host -> All) ---
+    function broadcastData(obj) {
+        if(player2Conn && player2Conn.open) player2Conn.send(obj);
+        spectators.forEach(s => { if(s.open) s.send(obj); });
+    }
+
     // --- DATA HANDLING ---
     function handleData(data) {
-        
+        if(data.type === 'error') {
+            alert(data.msg);
+            location.reload();
+            return;
+        }
+
         // --- SPECTATOR INIT ---
         if(data.type === 'spectate_init') {
-            isSpectator = true;
-            $('#specBadge').show();
-            $('#gameControls').hide();
-            $('#specMsg').show();
-            $('#connectPanel').hide();
-            
-            // Sync State
             game.load(data.fen);
             board.position(data.fen);
             p1Name = data.p1Name; p1Avatar = data.p1Avatar;
             p2Name = data.p2Name; p2Avatar = data.p2Avatar;
             p1Side = data.p1Side;
-            
-            // Sync Timers
             timeLimit = data.timeLimit;
-            timeWhite = data.timeWhite;
-            timeBlack = data.timeBlack;
+            timeWhite = data.timeWhite; timeBlack = data.timeBlack;
             
-            // Setup View (Spectators view as White usually)
-            board.orientation('white'); 
-            
-            // Set Names UI for Spectator (Host is Top, Guest is Bottom usually, or explicit)
-            // Let's standardize: White Bottom, Black Top for spectator
             updateSpectatorUI();
-            
-            if(!gameActive) startGameTimer(); // Start timer listener
+            board.orientation('white'); // Specs see white bottom
+            if(!gameActive) startGameTimer();
         }
 
         // --- PLAYER INIT ---
         else if(data.type === 'init') {
-            // I am Guest (Player 2)
-            p1Name = data.p1Name; 
-            p1Avatar = data.p1Avatar;
-            p1Side = data.p1Side; // Host's side
-            
-            // My Side is opposite
-            var mySide = (p1Side === 'w') ? 'b' : 'w';
+            p1Name = data.p1Name; p1Avatar = data.p1Avatar; p1Side = data.p1Side;
             timeLimit = data.timeLimit;
             
-            // Setup UI
+            var mySide = (p1Side === 'w') ? 'b' : 'w';
+            
             $('#btmName').text(myName);
             $('#btmAvatar').attr('src', myAvatar);
-            
             $('#topName').text(p1Name);
             $('#topAvatar').attr('src', p1Avatar).css('opacity', 1);
             
             board.orientation(mySide === 'w' ? 'white' : 'black');
             
-            // Send my info back to Host
+            // Send info back
             conn.send({ type: 'guest_info', name: myName, avatar: myAvatar });
-            
             startGame();
         }
-        
+
         // --- HOST RECEIVES GUEST INFO ---
         else if(data.type === 'guest_info') {
-            p2Name = data.name;
-            p2Avatar = data.avatar;
-            
+            p2Name = data.name; p2Avatar = data.avatar;
             $('#topName').text(p2Name);
             $('#topAvatar').attr('src', p2Avatar).css('opacity', 1);
-            
-            // Broadcast full roster to spectators now that P2 joined
             broadcastData({ type: 'update_roster', p2Name: p2Name, p2Avatar: p2Avatar });
         }
-        
-        // --- ROSTER UPDATE (For Spectators) ---
+
+        // --- ROSTER UPDATE ---
         else if(data.type === 'update_roster') {
-            p2Name = data.p2Name;
-            p2Avatar = data.p2Avatar;
+            p2Name = data.p2Name; p2Avatar = data.p2Avatar;
             if(isSpectator) updateSpectatorUI();
         }
 
@@ -609,30 +625,34 @@
             game.move(data.move);
             board.position(game.fen());
             updateStatus();
-            
-            // If I am Host, broadcast this move to spectators
-            if(peer && !conn.peer) { // Crude check if Host
-                spectators.forEach(s => { if(s.open) s.send(data); });
-            }
+            // Host forwards to spectators
+            if(isHost) spectators.forEach(s => { if(s.open) s.send(data); });
         }
         
-        // --- SYNC TIME (Host sends this periodically or on move) ---
         else if(data.type === 'time_sync') {
-            timeWhite = data.w;
-            timeBlack = data.b;
+            timeWhite = data.w; timeBlack = data.b;
             updateTimersDisplay();
         }
         
         else if(data.type === 'resign') endGame("GAME OVER", "Player Resigned");
+        
         else if(data.type === 'draw_offer') {
-            if(!isSpectator) {
-                if(confirm("Opponent offers draw?")) {
+            if(!isSpectator && !isHost) { // Guest receives offer
+                 if(confirm("Opponent offers draw?")) {
+                    conn.send({ type: 'draw_accept' }); // Send to Host
+                    endGame("DRAW", "Agreement");
+                 } else conn.send({ type: 'draw_decline' });
+            } else if (!isSpectator && isHost) { // Host receives offer
+                 // (Logic handled in UI for Host initiating)
+                 // If data comes IN, it means P2 offered
+                 if(confirm("Opponent offers draw?")) {
                     broadcastData({ type: 'draw_accept' });
                     endGame("DRAW", "Agreement");
-                } else broadcastData({ type: 'draw_decline' });
+                 } else broadcastData({ type: 'draw_decline' });
             }
         }
         else if(data.type === 'draw_accept') endGame("DRAW", "Agreement");
+        else if(data.type === 'draw_decline') alert("Draw Declined");
     }
 
     // --- UI HELPERS ---
@@ -642,18 +662,20 @@
     }
     
     function updateSpectatorUI() {
-        // Spec always sees White at Bottom
-        $('#btmName').text(p1Side === 'w' ? p1Name : p2Name);
-        $('#btmAvatar').attr('src', p1Side === 'w' ? p1Avatar : p2Avatar);
+        // Spec sees P1 (Host) vs P2
+        // We put White at bottom usually
+        var whiteName = (p1Side === 'w') ? p1Name : p2Name;
+        var whiteAv = (p1Side === 'w') ? p1Avatar : p2Avatar;
+        var blackName = (p1Side === 'w') ? p2Name : p1Name;
+        var blackAv = (p1Side === 'w') ? p2Avatar : p1Avatar;
         
-        $('#topName').text(p1Side === 'w' ? p2Name : p1Name);
-        $('#topAvatar').attr('src', p1Side === 'w' ? p2Avatar : p1Avatar);
+        $('#btmName').text(whiteName); $('#btmAvatar').attr('src', whiteAv);
+        $('#topName').text(blackName); $('#topAvatar').attr('src', blackAv);
     }
 
-    // --- GAME LOGIC ---
+    // --- GAME ---
     function startGame() {
-        timeWhite = timeLimit * 60;
-        timeBlack = timeLimit * 60;
+        timeWhite = timeLimit * 60; timeBlack = timeLimit * 60;
         startGameTimer();
         $('#connectPanel').hide();
         if(!isSpectator) $('#gameControls').show();
@@ -671,21 +693,15 @@
     function timerLoop() {
         if(!gameActive) return;
         
-        // Host manages "Official" time
-        if(peer && !conn.peer && !isSpectator) {
+        if(isHost) {
              if(game.turn() === 'w') timeWhite--; else timeBlack--;
-             
-             // Sync occasionally (every 5s) to keep specs roughly aligned
              if(timeWhite % 5 === 0) broadcastData({ type: 'time_sync', w: timeWhite, b: timeBlack });
-             
              if(timeWhite <= 0 || timeBlack <= 0) {
                  var msg = (timeWhite <= 0) ? "BLACK WINS" : "WHITE WINS";
-                 broadcastData({ type: 'timeout', msg: msg });
+                 broadcastData({ type: 'resign' }); // Reuse resign packet to stop game
                  endGame(msg, "Time Out");
              }
-        } 
-        // Clients/Specs just tick locally for smoothness
-        else {
+        } else {
              if(game.turn() === 'w') timeWhite--; else timeBlack--;
         }
         updateTimersDisplay();
@@ -694,10 +710,8 @@
     function updateTimersDisplay() {
         const fmt = (t) => { let m=Math.floor(t/60), s=t%60; return `${m}:${s<10?'0':''}${s}`; };
         
-        // Display Logic relies on Board Orientation
-        // If board is White: Bottom = White Time
-        var orientation = board.orientation(); // 'white' or 'black'
-        
+        // If board is white, bottom is white time
+        var orientation = board.orientation(); 
         var btmTime = (orientation === 'white') ? timeWhite : timeBlack;
         var topTime = (orientation === 'white') ? timeBlack : timeWhite;
         
@@ -712,11 +726,9 @@
     function onDragStart(source, piece) {
         if (!gameActive || isSpectator || game.game_over()) return false;
         
-        // My Side Validation
-        var amIWhite = (p1Side === 'w' && p1Name === myName) || (p1Side === 'b' && p1Name !== myName);
+        var amIWhite = (isHost && p1Side === 'w') || (!isHost && p1Side === 'b');
         if(amIWhite && piece.search(/^b/) !== -1) return false;
         if(!amIWhite && piece.search(/^w/) !== -1) return false;
-        
         if ((game.turn() === 'w' && !amIWhite) || (game.turn() === 'b' && amIWhite)) return false;
     }
 
@@ -725,7 +737,9 @@
         var move = game.move(moveObj);
         if (move === null) return 'snapback';
         
-        broadcastData({ type: 'move', move: moveObj });
+        if(isHost) broadcastData({ type: 'move', move: moveObj });
+        else conn.send({ type: 'move', move: moveObj });
+        
         updateStatus();
     }
 
@@ -753,12 +767,16 @@
 
     function resignGame() {
         if(confirm("Resign?")) {
-            broadcastData({ type: 'resign' });
+            if(isHost) broadcastData({ type: 'resign' });
+            else conn.send({ type: 'resign' });
             endGame("YOU LOSE", "Resigned");
         }
     }
     function offerDraw() {
-        if(confirm("Offer Draw?")) broadcastData({ type: 'draw_offer' });
+        if(confirm("Offer Draw?")) {
+            if(isHost) broadcastData({ type: 'draw_offer' });
+            else conn.send({ type: 'draw_offer' });
+        }
     }
     function copyId() {
         var txt = $('#myPeerId').text();
